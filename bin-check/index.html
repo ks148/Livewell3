@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Livewell – Bin Checker</title>
+
+<link rel="manifest" href="../manifest.json">
+<meta name="theme-color" content="#0f172a">
+
+<style>
+  :root{
+    --bg:#f7f9fc; --card:#fff; --text:#0f172a; --muted:#475569; --line:#e2e8f0;
+    --goodbg:#dcfce7; --good:#166534; --badbg:#fee2e2; --bad:#7f1d1d;
+    --warnbg:#fff7ed; --warn:#9a3412;
+    --blue:#1d4ed8; --blue2:#2563eb;
+    --shadow:0 2px 10px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);margin:0;padding:18px;color:var(--text)}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  .topnav{
+    position:sticky; top:0; z-index:50;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px;
+    margin-bottom:14px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);
+  }
+  .topnav .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .topnav a{text-decoration:none}
+  .topnav button{
+    padding:8px 14px;border-radius:10px;border:1px solid #d1d5db;
+    font-weight:900;cursor:pointer;background:#fff;
+  }
+  .topnav button.active{background:#0f172a;color:#fff;border-color:#0f172a}
+  .topnav .spacer{flex:1}
+  .small{font-size:12px;color:var(--muted);font-weight:900}
+
+  h1{margin:6px 0 6px;font-size:44px;letter-spacing:-.5px}
+  h2{margin:0;font-size:18px}
+  h3{margin:0 0 10px;font-size:16px}
+  .sub{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.35}
+
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+    border:1px solid rgba(226,232,240,.7)
+  }
+
+  .tag{
+    display:inline-block;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:1000;
+    border:1px solid var(--line);background:#fff;color:#0f172a;
+  }
+  .tag.good{background:var(--goodbg);color:var(--good);border-color:#86efac}
+  .tag.warn{background:var(--warnbg);color:var(--warn);border-color:#fed7aa}
+  .tag.bad{background:var(--badbg);color:var(--bad);border-color:#fecaca}
+  .tag.info{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace}
+
+  .scanWrap{width:100%; margin-top:10px}
+  input.big{
+    width:100%;
+    max-width:100%;
+    display:block;
+    font-size:34px;
+    padding:16px 18px;
+    border-radius:16px;
+    border:3px solid #0b5bd3;
+    outline:none;
+    background:#fff;
+  }
+  input.big:focus{border-color:#0a4db4; box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+
+  .resultCard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:18px;
+  }
+  .binBig{font-size:56px;font-weight:1100;margin:6px 0 0;letter-spacing:1px}
+  .titleBig{font-size:30px;font-weight:1100;margin:10px 0 0}
+  .kv{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .pill{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:13px;
+    font-weight:1000;
+    color:#0f172a;
+  }
+  .pill strong{margin-right:6px}
+  .availBox{
+    margin-top:12px;
+    padding:12px 12px;
+    border:1px dashed #cbd5e1;
+    background:#f8fafc;
+    border-radius:14px;
+  }
+  .availGrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    margin-top:8px;
+  }
+  @media(min-width:740px){
+    .availGrid{grid-template-columns:repeat(2, 1fr)}
+  }
+  .availRow{
+    display:flex; justify-content:space-between; gap:10px;
+    background:#fff; border:1px solid var(--line);
+    padding:10px 12px; border-radius:12px;
+    font-weight:1000;
+  }
+  .availRow .loc{color:#0f172a}
+  .availRow .qty{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  tbody tr:nth-child(even){background:#f9fafb}
+
+  .btn{
+    padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+    font-weight:1000;cursor:pointer;background:#fff
+  }
+  .btnDanger{background:#7f1d1d;border-color:#7f1d1d;color:#fff}
+  .btn:active{transform:translateY(1px)}
+
+  .sectionTitle{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 12px;border-radius:14px;border:1px dashed #cbd5e1;background:#f8fafc;
+    margin-bottom:10px;
+  }
+
+  .modeToggle{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+  .modeOption{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    font-weight:900;
+  }
+
+  .verifyPanel{
+    margin-top:14px;
+    padding:14px;
+    border:1px dashed #cbd5e1;
+    border-radius:14px;
+    background:#f8fafc;
+  }
+
+  .verifyFields{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+  @media(min-width:740px){
+    .verifyFields{grid-template-columns:repeat(2, 1fr)}
+  }
+
+  .verifyField{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px;
+  }
+  .verifyLabel{
+    font-size:12px;
+    color:var(--muted);
+    font-weight:1000;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+  }
+  .verifyValue{
+    min-height:30px;
+    font-size:22px;
+    font-weight:1100;
+    word-break:break-word;
+  }
+
+  .verifyStep{
+    margin-top:10px;
+    font-size:14px;
+    color:var(--muted);
+    font-weight:1000;
+  }
+
+  .verifyStatus{
+    margin-top:10px;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:22px;
+    font-weight:1100;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .verifyStatus.neutral{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
+  .verifyStatus.good{background:var(--goodbg);color:var(--good);border-color:#86efac}
+  .verifyStatus.bad{background:var(--badbg);color:var(--bad);border-color:#fecaca}
+  .verifyStatus.warn{background:var(--warnbg);color:var(--warn);border-color:#fed7aa}
+
+  .verifyDetails{
+    margin-top:8px;
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.35;
+    min-height:20px;
+  }
+
+  .searchHint{
+    margin-top:8px;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:900;
+  }
+
+  .notAssigned{
+    color:#9a3412;
+    font-weight:1100;
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <div class="row">
+      <a href="../index.html"><button>🏠 Home</button></a>
+      <a href="../Picks/index.html"><button>📋 Picks</button></a>
+      <a href="../putaway/index.html"><button>📦 Putaway</button></a>
+      <a href="../bin/index.html"><button>📍 Bin Lookup</button></a>
+      <a href="../bin-check/index.html"><button class="active">📍 Bin Check</button></a>
+      <a href="../manual/index.html"><button>📘 Manual</button></a>
+      <div class="spacer"></div>
+      <div class="small">Ops Tools</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>Bin Checker</h1>
+        <div class="sub">
+          Lookup mode: scan <strong>ITEM</strong> → see bin + availability. Scan <strong>BIN</strong> → see what belongs there.<br>
+          Type part of a product title and press <strong>Enter</strong> → see all matching products and their bins.<br>
+          Verify mode: scan <strong>BIN</strong>, then scan <strong>ITEM</strong> → confirm it is the correct item in the correct bin.
+        </div>
+      </div>
+      <div class="row" style="gap:8px;align-items:center">
+        <span id="lookupStatus" class="tag warn">Loading…</span>
+        <span id="modeBadge" class="tag warn">MODE: LOOKUP</span>
+      </div>
+    </div>
+
+    <div id="meta" class="sub" style="margin-top:10px"></div>
+
+    <div class="modeToggle">
+      <label class="modeOption">
+        <input type="radio" name="appMode" value="lookup" checked>
+        Lookup
+      </label>
+      <label class="modeOption">
+        <input type="radio" name="appMode" value="verify">
+        Verify Bin
+      </label>
+    </div>
+
+    <div id="verifyPanel" class="verifyPanel" style="display:none;">
+      <h3>Verify Bin</h3>
+      <div class="sub" style="margin-top:0;">
+        Fast location checking: scan a bin, then scan the item in that bin.
+      </div>
+
+      <div class="verifyFields">
+        <div class="verifyField">
+          <div class="verifyLabel">Scanned Bin</div>
+          <div id="verifyBinDisplay" class="verifyValue mono">—</div>
+        </div>
+        <div class="verifyField">
+          <div class="verifyLabel">Scanned Item</div>
+          <div id="verifyItemDisplay" class="verifyValue mono">—</div>
+        </div>
+      </div>
+
+      <div id="verifyStep" class="verifyStep">Waiting for bin scan.</div>
+      <div id="verifyStatus" class="verifyStatus neutral">Ready</div>
+      <div id="verifyDetails" class="verifyDetails"></div>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" type="button" id="verifyResetBtn">Reset Verify</button>
+      </div>
+    </div>
+
+    <div class="scanWrap">
+      <input id="scan" class="big" placeholder="Scan BIN / ITEM or type product title + Enter" autofocus autocomplete="off" />
+      <div class="searchHint">
+        Examples: scan barcode, scan bin, scan SKU, or type part of title like <span class="mono">gamakatsu super mutu</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sectionTitle">
+      <div>
+        <h2>Result</h2>
+        <div class="sub">Replaces on every scan/search (history is saved in the session log below).</div>
+      </div>
+    </div>
+    <div id="result" class="resultCard">
+      <span class="tag warn">Ready</span>
+      <span class="sub">Scan a BIN code, product barcode, SKU, or type part of a title.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sectionTitle">
+      <div>
+        <h2>Session Log</h2>
+        <div class="sub">Everything scanned or searched on this iPad during this session.</div>
+      </div>
+      <div class="row">
+        <div class="sub">Scans: <strong id="scanCount">0</strong></div>
+        <button class="btn btnDanger" type="button" onclick="clearLog()">Clear Log</button>
+      </div>
+    </div>
+
+    <div style="overflow:auto; max-height:45vh">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Scanned</th>
+            <th>Bin</th>
+            <th>Title / Summary</th>
+          </tr>
+        </thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const CSV_URL = '../pickle-data.csv';
+
+  const COL_BARCODE = 'Variant Barcode';
+  const COL_SKU     = 'Variant SKU';
+  const COL_TITLE   = 'Title';
+  const COL_BIN     = 'Variant Metafield: custom.wh_bin [single_line_text_field]';
+
+  const COL_AV_WH   = 'Inventory Available: Warehouse-66';
+  const COL_AV_PLY  = 'Inventory Available: Plymouth';
+  const COL_AV_GH   = 'Inventory Available: Green Harbor';
+  const COL_AV_CONT = 'Inventory Available: Container - PLY';
+
+  const VARIANT_ID_CANDIDATES = [
+    'Variant ID','Variant Id','variant_id','variant id','VariantID','Variant: ID','Variant: Id'
+  ];
+
+  const DUP_WINDOW_MS = 350;
+
+  let rows = [];
+  let logEntries = [];
+  let lastScan = { key:'', ts:0 };
+
+  let appMode = 'lookup';
+  let verifyState = {
+    waitingFor: 'bin',
+    bin: '',
+    item: ''
+  };
+
+  const metaEl = document.getElementById('meta');
+  const resultEl = document.getElementById('result');
+  const logEl = document.getElementById('log');
+  const scanCountEl = document.getElementById('scanCount');
+  const lookupStatusEl = document.getElementById('lookupStatus');
+  const modeBadgeEl = document.getElementById('modeBadge');
+  const scanEl = document.getElementById('scan');
+
+  const appModeEls = document.querySelectorAll('input[name="appMode"]');
+  const verifyPanelEl = document.getElementById('verifyPanel');
+  const verifyBinDisplayEl = document.getElementById('verifyBinDisplay');
+  const verifyItemDisplayEl = document.getElementById('verifyItemDisplay');
+  const verifyStepEl = document.getElementById('verifyStep');
+  const verifyStatusEl = document.getElementById('verifyStatus');
+  const verifyDetailsEl = document.getElementById('verifyDetails');
+  const verifyResetBtnEl = document.getElementById('verifyResetBtn');
+
+  function esc(s){
+    return String(s ?? '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+  function setTag(el, kind, text){
+    el.className = 'tag ' + (kind || 'warn');
+    el.textContent = text;
+  }
+  function nInt(v){
+    const s = String(v ?? '').trim();
+    if(!s) return 0;
+    const num = Number(s);
+    return Number.isFinite(num) ? Math.floor(num) : 0;
+  }
+  function getVariantId(row){
+    for(const k of VARIANT_ID_CANDIDATES){
+      if(row[k] && String(row[k]).trim()) return String(row[k]).trim();
+    }
+    return '';
+  }
+  function normalizeValue(v){
+    return String(v ?? '').trim().toUpperCase();
+  }
+  function normalizeLoose(v){
+    return String(v ?? '')
+      .toUpperCase()
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function detectDelimiter(text) {
+    const firstLine = (text.split(/\r?\n/).find(l => l.trim() !== '') || '');
+    const candidates = [',',';','\t','|'];
+    let best = ',', bestCount = -1;
+    for (const d of candidates) {
+      const c = firstLine.split(d).length;
+      if (c > bestCount) { bestCount = c; best = d; }
+    }
+    return best;
+  }
+  function parseCSV(text, delimiter) {
+    const out = [];
+    let i = 0, field = '', row = [], inQuotes = false;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+    while (i < text.length) {
+      const c = text[i];
+      if (c === '"') {
+        if (inQuotes && text[i+1] === '"') { field += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (c === delimiter && !inQuotes) {
+        row.push(field); field = '';
+      } else if ((c === '\n' || c === '\r') && !inQuotes) {
+        if (field !== '' || row.length) { row.push(field); out.push(row); row = []; field = ''; }
+        if (c === '\r' && text[i+1] === '\n') i++;
+      } else {
+        field += c;
+      }
+      i++;
+    }
+    if (field !== '' || row.length) { row.push(field); out.push(row); }
+    return out;
+  }
+  function toObjects(matrix) {
+    if (!matrix.length) return [];
+    const headers = (matrix[0] || []).map(h => String(h ?? '').trim());
+    const objects = [];
+    for (let r = 1; r < matrix.length; r++) {
+      const line = matrix[r];
+      if (!line || !line.length) continue;
+      if (line.join('').trim() === '') continue;
+      const obj = {};
+      for (let c = 0; c < headers.length; c++) obj[headers[c]] = (line[c] ?? '').trim();
+      objects.push(obj);
+    }
+    return objects;
+  }
+
+  function createAudioContext() {
+    return new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function playGoodBeep() {
+    try {
+      const ctx = createAudioContext();
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      osc1.frequency.setValueAtTime(1046.5, ctx.currentTime);
+      osc2.frequency.setValueAtTime(1318.5, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+
+      osc1.stop(ctx.currentTime + 0.42);
+      osc2.stop(ctx.currentTime + 0.42);
+
+      setTimeout(() => {
+        ctx.close().catch(()=>{});
+      }, 500);
+    } catch(_) {}
+  }
+
+  function playBadBeep() {
+    try {
+      const ctx = createAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.20);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.22);
+
+      setTimeout(() => {
+        ctx.close().catch(()=>{});
+      }, 300);
+    } catch(_) {}
+  }
+
+  async function loadCSV(){
+    setTag(lookupStatusEl, 'warn', 'Loading…');
+    setModeBadge();
+    metaEl.innerHTML = '';
+
+    try{
+      const url = CSV_URL + '?v=' + Date.now();
+      const res = await fetch(url, { cache:'no-store' });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const lastModified = res.headers.get('last-modified');
+      const etag = res.headers.get('etag');
+
+      const text = await res.text();
+      const delim = detectDelimiter(text);
+      rows = toObjects(parseCSV(text, delim));
+
+      const sample = rows[0] || {};
+      const hasBin = (COL_BIN in sample);
+      const hasBarcode = (COL_BARCODE in sample);
+
+      metaEl.innerHTML = `
+        <div><strong>Data source:</strong> <code>${esc(CSV_URL)}</code></div>
+        <div><strong>Last updated (server):</strong> ${lastModified ? esc(new Date(lastModified).toLocaleString()) : '<span class="mono">Unknown</span>'}</div>
+        ${etag ? `<div><strong>ETag:</strong> <code class="mono">${esc(etag)}</code></div>` : ``}
+        <div><strong>Rows:</strong> ${rows.length}</div>
+      `;
+
+      if(!hasBarcode){
+        setTag(lookupStatusEl,'bad','Missing Variant Barcode');
+      } else if(!hasBin){
+        setTag(lookupStatusEl,'bad','Missing WH Bin field');
+      } else {
+        setTag(lookupStatusEl,'good','Ready');
+      }
+    }catch(e){
+      rows = [];
+      setTag(lookupStatusEl,'bad','CSV load failed');
+      metaEl.innerHTML = `<div style="color:#7f1d1d;"><strong>Error:</strong> ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderLog(){
+    scanCountEl.textContent = String(logEntries.length);
+    logEl.innerHTML = '';
+    for(const e of logEntries){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(new Date(e.ts).toLocaleTimeString())}</td>
+        <td class="mono">${esc(e.type)}</td>
+        <td class="mono">${esc(e.scanned)}</td>
+        <td class="mono">${esc(e.bin || '')}</td>
+        <td>${esc(e.title || '')}</td>
+      `;
+      logEl.appendChild(tr);
+    }
+  }
+  function clearLog(){
+    if(!logEntries.length) return;
+    if(!confirm('Clear session log?')) return;
+    logEntries = [];
+    renderLog();
+  }
+
+  function findProductByScan(q){
+    if(!rows.length) return null;
+    const nq = normalizeValue(q);
+    return rows.find(r =>
+      normalizeValue(r[COL_BARCODE]) === nq ||
+      normalizeValue(r[COL_SKU]) === nq
+    ) || null;
+  }
+
+  function findProductsByTitleSearch(q){
+    const needle = normalizeLoose(q);
+    if(!needle) return [];
+    return rows.filter(r => normalizeLoose(r[COL_TITLE]).includes(needle));
+  }
+
+  function showProductResult(m){
+    const vid = getVariantId(m);
+    const bin = (m[COL_BIN] || '').trim() || 'Not Assigned';
+
+    const avWH  = nInt(m[COL_AV_WH]);
+    const avPLY = nInt(m[COL_AV_PLY]);
+    const avGH  = nInt(m[COL_AV_GH]);
+    const avCON = nInt(m[COL_AV_CONT]);
+
+    resultEl.innerHTML = `
+      <div class="tag good">PRODUCT</div>
+
+      <div class="binBig">${esc(bin)}</div>
+
+      <div class="titleBig">${esc(m[COL_TITLE] || '')}</div>
+
+      <div class="kv">
+        <div class="pill"><strong>Barcode:</strong><span class="mono">${esc(m[COL_BARCODE] || '')}</span></div>
+        <div class="pill"><strong>SKU:</strong><span class="mono">${esc(m[COL_SKU] || '')}</span></div>
+        ${vid ? `<div class="pill"><strong>Variant ID:</strong><span class="mono">${esc(vid)}</span></div>` : ``}
+      </div>
+
+      <div class="availBox">
+        <div style="font-weight:1100">Available:</div>
+        <div class="availGrid">
+          <div class="availRow"><span class="loc">Warehouse-66</span><span class="qty">${esc(avWH)}</span></div>
+          <div class="availRow"><span class="loc">Plymouth</span><span class="qty">${esc(avPLY)}</span></div>
+          <div class="availRow"><span class="loc">Green Harbor</span><span class="qty">${esc(avGH)}</span></div>
+          <div class="availRow"><span class="loc">Container - PLY</span><span class="qty">${esc(avCON)}</span></div>
+        </div>
+        <div class="sub" style="margin-top:10px">
+          <strong>Meaning:</strong> This product should be in bin <span class="mono">${esc(bin)}</span>.
+        </div>
+      </div>
+    `;
+  }
+
+  function showBinResult(binCode, matches){
+    const list = [...matches].sort((a,b)=>{
+      const ta = (a[COL_TITLE]||'').toLowerCase();
+      const tb = (b[COL_TITLE]||'').toLowerCase();
+      return ta.localeCompare(tb);
+    });
+
+    let html = `
+      <div class="tag warn">BIN</div>
+      <div class="binBig">${esc(binCode)}</div>
+      <div class="sub" style="margin-top:6px">
+        Items assigned to this bin in the system (${list.length}):
+      </div>
+
+      <div style="margin-top:12px; overflow:auto; max-height:45vh">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>SKU</th>
+              <th>Barcode</th>
+              <th>WH</th>
+              <th>PLY</th>
+              <th>GH</th>
+              <th>CON</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for(const r of list){
+      html += `
+        <tr>
+          <td>${esc(r[COL_TITLE]||'')}</td>
+          <td class="mono">${esc(r[COL_SKU]||'')}</td>
+          <td class="mono">${esc(r[COL_BARCODE]||'')}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_WH]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_PLY]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_GH]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_CONT]))}</td>
+        </tr>
+      `;
+    }
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sub" style="margin-top:10px">
+        <strong>Tip:</strong> If you scan a BIN and physically see items that are not in this list, those are wrong-bin candidates.
+      </div>
+    `;
+
+    resultEl.innerHTML = html;
+  }
+
+  function showTitleSearchResults(q, matches){
+    const list = [...matches].sort((a,b)=>{
+      const ta = (a[COL_TITLE]||'').toLowerCase();
+      const tb = (b[COL_TITLE]||'').toLowerCase();
+      if(ta !== tb) return ta.localeCompare(tb);
+      return (a[COL_SKU]||'').localeCompare(b[COL_SKU]||'');
+    });
+
+    let html = `
+      <div class="tag info">TITLE SEARCH</div>
+      <div class="titleBig">${esc(q)}</div>
+      <div class="sub" style="margin-top:6px">
+        Matching products (${list.length}):
+      </div>
+
+      <div style="margin-top:12px; overflow:auto; max-height:50vh">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>SKU</th>
+              <th>Barcode</th>
+              <th>Bin</th>
+              <th>WH</th>
+              <th>PLY</th>
+              <th>GH</th>
+              <th>CON</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for(const r of list){
+      const bin = String(r[COL_BIN] || '').trim();
+      const binDisplay = bin || 'Not Assigned';
+
+      html += `
+        <tr>
+          <td>${esc(r[COL_TITLE] || '')}</td>
+          <td class="mono">${esc(r[COL_SKU] || '')}</td>
+          <td class="mono">${esc(r[COL_BARCODE] || '')}</td>
+          <td class="mono ${bin ? '' : 'notAssigned'}">${esc(binDisplay)}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_WH]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_PLY]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_GH]))}</td>
+          <td class="mono">${esc(nInt(r[COL_AV_CONT]))}</td>
+        </tr>
+      `;
+    }
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sub" style="margin-top:10px">
+        <strong>Meaning:</strong> This lets you type part of a product title and see where matching products live. Any row showing <span class="mono">Not Assigned</span> does not currently have a warehouse bin in the file.
+      </div>
+    `;
+
+    resultEl.innerHTML = html;
+  }
+
+  function smartLookup(q){
+    if(!rows.length){
+      resultEl.innerHTML = `<span class="tag bad">Not ready</span> <span class="sub">CSV not loaded.</span>`;
+      return;
+    }
+
+    const now = Date.now();
+    if (q && lastScan.key === `lookup:${q}` && (now - lastScan.ts) < DUP_WINDOW_MS){
+      lastScan.ts = now;
+      return;
+    }
+    lastScan = { key:`lookup:${q}`, ts:now };
+
+    const normQ = normalizeValue(q);
+
+    const binMatches = rows.filter(r => normalizeValue(r[COL_BIN]) === normQ);
+    if(binMatches.length){
+      showBinResult(q, binMatches);
+
+      logEntries.unshift({
+        ts: now,
+        type: 'BIN',
+        scanned: q,
+        bin: q,
+        title: `${binMatches.length} items`
+      });
+      renderLog();
+      return;
+    }
+
+    const m = findProductByScan(q);
+    if(m){
+      showProductResult(m);
+
+      logEntries.unshift({
+        ts: now,
+        type: 'PRODUCT',
+        scanned: q,
+        bin: (m[COL_BIN] || '').trim(),
+        title: (m[COL_TITLE] || '').trim()
+      });
+      renderLog();
+      return;
+    }
+
+    const titleMatches = findProductsByTitleSearch(q);
+    if(titleMatches.length){
+      showTitleSearchResults(q, titleMatches);
+
+      logEntries.unshift({
+        ts: now,
+        type: 'TITLE_SEARCH',
+        scanned: q,
+        bin: '',
+        title: `${titleMatches.length} matches`
+      });
+      renderLog();
+      return;
+    }
+
+    resultEl.innerHTML = `<span class="tag bad">Not found</span> <span class="sub">No BIN, barcode, SKU, or title matches found.</span>`;
+
+    logEntries.unshift({
+      ts: now,
+      type: 'NOT_FOUND',
+      scanned: q,
+      bin: '',
+      title: ''
+    });
+    renderLog();
+  }
+
+  function setModeBadge(){
+    if(appMode === 'verify'){
+      setTag(modeBadgeEl, 'warn', 'MODE: VERIFY BIN');
+    } else {
+      setTag(modeBadgeEl, 'warn', 'MODE: LOOKUP');
+    }
+  }
+
+  function setVerifyStatus(kind, text){
+    verifyStatusEl.className = 'verifyStatus ' + (kind || 'neutral');
+    verifyStatusEl.textContent = text;
+  }
+
+  function resetVerifyMode(){
+    verifyState.waitingFor = 'bin';
+    verifyState.bin = '';
+    verifyState.item = '';
+    verifyBinDisplayEl.textContent = '—';
+    verifyItemDisplayEl.textContent = '—';
+    verifyStepEl.textContent = 'Waiting for bin scan.';
+    setVerifyStatus('neutral', 'Ready');
+    verifyDetailsEl.textContent = '';
+  }
+
+  function setAppMode(mode){
+    appMode = mode === 'verify' ? 'verify' : 'lookup';
+    verifyPanelEl.style.display = appMode === 'verify' ? 'block' : 'none';
+    setModeBadge();
+    resetVerifyMode();
+    scanEl.placeholder = appMode === 'verify'
+      ? 'Verify mode: scan BIN, then ITEM'
+      : 'Scan BIN / ITEM or type product title + Enter';
+    setTimeout(()=>scanEl.focus(), 25);
+  }
+
+  function findProductRowsByScan(q){
+    const nq = normalizeValue(q);
+    return rows.filter(r =>
+      normalizeValue(r[COL_BARCODE]) === nq ||
+      normalizeValue(r[COL_SKU]) === nq
+    );
+  }
+
+  function logVerifyResult(type, scanned, bin, title){
+    logEntries.unshift({
+      ts: Date.now(),
+      type,
+      scanned,
+      bin,
+      title
+    });
+    renderLog();
+  }
+
+  function verifyBinItem(binCode, itemCode){
+    const normBin = normalizeValue(binCode);
+    const matches = findProductRowsByScan(itemCode);
+
+    if(!matches.length){
+      setVerifyStatus('warn', 'Item not found');
+      verifyDetailsEl.textContent = `Scanned item ${itemCode} is not in the loaded file.`;
+      playBadBeep();
+      logVerifyResult('VERIFY_ITEM_NOT_FOUND', itemCode, binCode, 'Item not found in CSV');
+      return;
+    }
+
+    const exact = matches.find(r => normalizeValue(r[COL_BIN]) === normBin);
+
+    if(exact){
+      const title = (exact[COL_TITLE] || '').trim();
+      setVerifyStatus('good', 'Correct item in correct bin');
+      verifyDetailsEl.textContent = title
+        ? `${title} belongs in ${binCode}.`
+        : `Item ${itemCode} belongs in ${binCode}.`;
+      playGoodBeep();
+      logVerifyResult('VERIFY_OK', itemCode, binCode, title || 'Correct item in correct bin');
+      return;
+    }
+
+    const expectedBins = [...new Set(
+      matches
+        .map(r => String(r[COL_BIN] || '').trim())
+        .filter(Boolean)
+    )];
+
+    setVerifyStatus('bad', 'Wrong bin');
+    verifyDetailsEl.textContent = expectedBins.length
+      ? `Item ${itemCode} does not belong in ${binCode}. Expected: ${expectedBins.join(', ')}`
+      : `Item ${itemCode} was found, but no assigned bin was available in the file.`;
+    playBadBeep();
+    logVerifyResult('VERIFY_WRONG_BIN', itemCode, binCode, expectedBins.length ? `Expected ${expectedBins.join(', ')}` : 'No assigned bin');
+  }
+
+  function handleVerifyScan(q){
+    if(!rows.length){
+      setVerifyStatus('bad', 'Not ready');
+      verifyDetailsEl.textContent = 'CSV not loaded.';
+      return;
+    }
+
+    const now = Date.now();
+    if (q && lastScan.key === `verify:${q}:${verifyState.waitingFor}` && (now - lastScan.ts) < DUP_WINDOW_MS){
+      lastScan.ts = now;
+      return;
+    }
+    lastScan = { key:`verify:${q}:${verifyState.waitingFor}`, ts:now };
+
+    if(verifyState.waitingFor === 'bin'){
+      verifyState.bin = q;
+      verifyState.item = '';
+      verifyBinDisplayEl.textContent = q;
+      verifyItemDisplayEl.textContent = '—';
+      verifyStepEl.textContent = 'Bin scanned. Now scan the item in that bin.';
+      setVerifyStatus('neutral', 'Waiting for item scan');
+      verifyDetailsEl.textContent = '';
+      return verifyState.waitingFor = 'item';
+    }
+
+    verifyState.item = q;
+    verifyItemDisplayEl.textContent = q;
+    verifyStepEl.textContent = 'Checking...';
+    verifyBinItem(verifyState.bin, verifyState.item);
+
+    verifyState.waitingFor = 'bin';
+    verifyState.bin = '';
+    verifyState.item = '';
+    verifyStepEl.textContent = 'Scan next bin to continue.';
+  }
+
+  function handleScan(q){
+    if(appMode === 'verify'){
+      handleVerifyScan(q);
+    } else {
+      smartLookup(q);
+    }
+  }
+
+  appModeEls.forEach(el => {
+    el.addEventListener('change', () => {
+      if(el.checked) setAppMode(el.value);
+    });
+  });
+
+  verifyResetBtnEl.addEventListener('click', () => {
+    resetVerifyMode();
+    setTimeout(()=>scanEl.focus(), 25);
+  });
+
+  scanEl.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+      const q = scanEl.value.trim();
+      scanEl.value = '';
+      if(!q) return;
+      handleScan(q);
+      setTimeout(()=>scanEl.focus(), 25);
+    }
+  });
+
+  setAppMode('lookup');
+  loadCSV();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('../sw.js').catch(()=>{});
+    });
+  }
+</script>
+
+</body>
+</html>

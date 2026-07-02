@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Livewell – Bin Assignment</title>
+
+<link rel="manifest" href="../manifest.json">
+<meta name="theme-color" content="#0f172a">
+
+<style>
+:root{
+  --bg:#f7f9fc; --card:#fff; --text:#0f172a; --muted:#475569; --line:#e2e8f0;
+  --goodbg:#dcfce7; --good:#166534; --badbg:#fee2e2; --bad:#7f1d1d;
+  --warnbg:#fff7ed; --warn:#9a3412; --infobg:#dbeafe; --info:#1d4ed8;
+  --blue:#1d4ed8; --blue2:#2563eb; --activeRow:#eff6ff; --activeRowBorder:#93c5fd;
+}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);margin:0;padding:18px;color:var(--text)}
+.wrap{max-width:1280px;margin:0 auto}
+
+.topnav{
+  position:sticky; top:0; z-index:50;
+  background:#fff;border:1px solid var(--line);
+  border-radius:14px;padding:10px;margin-bottom:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.05);
+}
+.topnav .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.topnav a{text-decoration:none}
+.topnav button{
+  padding:8px 14px;border-radius:10px;border:1px solid #d1d5db;
+  font-weight:900;cursor:pointer;background:#fff;
+}
+.topnav button.active{background:#0f172a;color:#fff;border-color:#0f172a}
+.topnav .spacer{flex:1}
+.small{font-size:12px;color:var(--muted);font-weight:900}
+
+h1{margin:6px 0 6px;font-size:34px}
+.sub{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  border:1px solid rgba(226,232,240,.7);
+}
+
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.col{display:flex;flex-direction:column;gap:6px}
+.flex1{flex:1}
+
+.btn{
+  padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+  font-weight:900;cursor:pointer;background:#fff;
+}
+.btnPrimary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btnDanger{background:#7f1d1d;border-color:#7f1d1d;color:#fff}
+.btnDark{background:#0f172a;border-color:#0f172a;color:#fff}
+.btnSoft{
+  background:#eef2ff;border-color:#c7d2fe;color:#1d4ed8;
+}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+button.rowUndo{
+  padding:8px 10px;border-radius:10px;border:1px solid #c7d2fe;
+  background:#eef2ff;color:#1d4ed8;font-weight:1000;cursor:pointer;
+  white-space:nowrap;
+}
+button.rowRemove{
+  padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;
+  background:#fff;color:#475569;font-weight:900;cursor:pointer;
+  white-space:nowrap;
+}
+button.miniRemove{
+  padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;
+  background:#fff;color:#475569;font-weight:900;cursor:pointer;
+  white-space:nowrap;font-size:12px;
+}
+
+input.big{
+  font-size:24px;padding:12px 14px;width:100%;
+  border-radius:14px;border:1px solid #cbd5e1;box-sizing:border-box
+}
+input.med, select.med{
+  font-size:18px;padding:10px 12px;border-radius:12px;
+  border:1px solid #cbd5e1;width:220px;max-width:100%;
+  box-sizing:border-box;background:#fff
+}
+input.sm, select.sm{
+  font-size:15px;padding:8px 10px;border-radius:10px;
+  border:1px solid #cbd5e1;width:140px;max-width:100%;
+  box-sizing:border-box;background:#fff
+}
+input.code{
+  font-size:20px;padding:10px 12px;border-radius:12px;
+  border:1px solid #cbd5e1;width:260px;max-width:100%;
+  box-sizing:border-box;font-family:ui-monospace, monospace
+}
+
+.badge{
+  display:inline-block;padding:6px 10px;border-radius:999px;
+  font-weight:900;font-size:12px;border:1px solid var(--line);background:#f8fafc
+}
+.badge.ok{background:var(--goodbg);border-color:#86efac;color:var(--good)}
+.badge.bad{background:var(--badbg);border-color:#fecaca;color:var(--bad)}
+.badge.warn{background:var(--warnbg);border-color:#fed7aa;color:var(--warn)}
+.badge.info{background:var(--infobg);border-color:#93c5fd;color:var(--info)}
+
+.modeSwitch{
+  display:inline-flex;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:4px;gap:4px
+}
+.modeSwitch button{
+  padding:8px 12px;border:none;border-radius:8px;background:transparent;font-weight:900;cursor:pointer
+}
+.modeSwitch button.active{background:#1d4ed8;color:#fff}
+
+.kpi{
+  min-width:260px;flex:1;
+  background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:16px
+}
+.kpi .label{font-size:12px;color:var(--muted);font-weight:900;letter-spacing:.04em}
+.kpi .value{font-size:34px;font-weight:1000;line-height:1.1;margin-top:4px}
+.kpi .subv{font-size:13px;color:var(--muted);margin-top:6px}
+
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+tbody tr:nth-child(even){background:#f9fafb}
+tbody tr.activeBinRow,
+tbody tr.activeBinRow:nth-child(even){
+  background:var(--activeRow)!important;
+  box-shadow:inset 4px 0 0 var(--activeRowBorder);
+}
+.mono{font-family:ui-monospace, monospace}
+
+.cellInput{
+  width:100%;min-width:112px;max-width:132px;padding:8px 8px;border-radius:10px;
+  border:1px solid #cbd5e1;font-weight:900;box-sizing:border-box;
+  font-family:ui-monospace, monospace;
+}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sep{height:1px;background:var(--line);margin:14px 0}
+
+.hide{display:none!important}
+.right{margin-left:auto}
+.metaGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.statusBox{
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  font-weight:1000;
+  color:#0f172a;
+}
+
+.tableWrap{
+  margin-top:12px;
+  overflow:auto;
+  max-height:50vh;
+}
+
+.panelGrid{
+  display:grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap:14px;
+  margin-top:14px;
+}
+.panel{
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+}
+.panelHead{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.panelTitle{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:1000;
+  letter-spacing:.04em;
+}
+.contentsList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:280px;
+  overflow:auto;
+}
+.contentsItem{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:10px;
+  align-items:center;
+}
+.contentsItem .name{
+  font-weight:900;
+  color:#0f172a;
+  line-height:1.25;
+}
+.contentsItem .meta{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.3;
+}
+.emptyState{
+  padding:14px;
+  border:1px dashed #cbd5e1;
+  border-radius:12px;
+  color:var(--muted);
+  font-weight:700;
+  background:#fff;
+}
+.actionStack{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.noteBox{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  background:#fff;
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.35;
+}
+.warnText{color:var(--warn);font-weight:1000}
+.okText{color:var(--good);font-weight:1000}
+
+.colNum{width:56px}
+.colVar{width:120px}
+.colBarcode{width:120px}
+.colWhBin{width:128px}
+.colSku{width:100px}
+.colTitle{width:220px}
+.colZone{width:64px}
+.colBay{width:64px}
+.colShelf{width:72px}
+.colBinPos{width:80px}
+.colAction{width:118px}
+
+@media (max-width: 980px){
+  .panelGrid{grid-template-columns:1fr}
+}
+@media (max-width: 820px){
+  body{padding:12px}
+  .card{padding:12px}
+  th,td{padding:8px}
+  .colTitle{width:180px}
+  .colWhBin{width:136px}
+  .cellInput{min-width:118px;max-width:136px}
+  .tableWrap{max-height:55vh}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="topnav">
+  <div class="row">
+    <a href="../index.html"><button>🏠 Home</button></a>
+    <a href="../Picks/index.html"><button>📋 Picks</button></a>
+    <a href="../putaway/index.html"><button>📦 Putaway</button></a>
+    <a href="../bin/index.html"><button class="active">📍 Bin</button></a>
+    <a href="../bin-check/index.html"><button>📌 Bin Checker</button></a>
+    <a href="../manual/index.html"><button>📘 Manual</button></a>
+    <div class="spacer"></div>
+    <div class="small">Ops Tools</div>
+  </div>
+</div>
+
+<h1>Bin Assignment</h1>
+<p class="sub">
+Assign warehouse bins in <b>Bulk Edit</b>, <b>Partial Bay</b>, or <b>Quick Add</b>.<br>
+In <b>Bulk Edit</b>, enter <b>Zone</b> and <b>Starting Bay</b> to begin at Shelf 01 / Bin 01.<br>
+In <b>Partial Bay</b>, enter <b>Zone</b>, <b>Bay</b>, <b>Shelf</b>, and <b>Bin</b> to start from that exact point and continue using the same advancement logic.<br>
+In <b>Bulk</b> and <b>Partial</b>, the app now stays on the current bin until you click <b>Done With This Bin</b>.
+</p>
+
+<div class="card">
+  <div class="toolbar">
+    <div class="modeSwitch">
+      <button id="modeBulkBtn" class="active" type="button" onclick="setMode('bulk')">Bulk Edit</button>
+      <button id="modePartialBtn" type="button" onclick="setMode('partial')">Partial Bay</button>
+      <button id="modeQuickBtn" type="button" onclick="setMode('quick')">Quick Add</button>
+    </div>
+
+    <span id="csvStatus" class="badge warn">CSV: Loading…</span>
+    <span id="statusBadge" class="badge info">Ready</span>
+    <span id="draftStatus" class="badge">Draft idle</span>
+    <span id="duplicateBadge" class="badge hide">Duplicate</span>
+
+    <div class="right row">
+      <button class="btn" type="button" onclick="undoLast()">Undo Last</button>
+      <button class="btn btnDanger" type="button" onclick="clearAssignments()">Clear</button>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="metaGrid">
+    <div class="col">
+      <div class="small">Zone</div>
+      <input id="zoneInput" class="sm mono" placeholder="A" maxlength="3">
+    </div>
+
+    <div class="col">
+      <div class="small">Starting Bay</div>
+      <input id="bayInput" class="sm mono" placeholder="03">
+    </div>
+
+    <div class="col partialOnly hide">
+      <div class="small">Starting Shelf</div>
+      <input id="partialShelfInput" class="sm mono" placeholder="06">
+    </div>
+
+    <div class="col partialOnly hide">
+      <div class="small">Starting Bin</div>
+      <input id="partialBinInput" class="sm mono" placeholder="03">
+    </div>
+
+    <div class="col sequenceOnly">
+      <div class="small">Shelf (auto)</div>
+      <div id="shelfDisplay" class="statusBox mono">01</div>
+    </div>
+
+    <div class="col sequenceOnly">
+      <div class="small">Current Bin Position</div>
+      <div id="binNumDisplay" class="statusBox mono">01</div>
+    </div>
+
+    <div class="col quickOnly hide">
+      <div class="small">WH Bin (exact)</div>
+      <input id="quickBinInput" class="code" placeholder="A-03-02-05">
+    </div>
+
+    <div class="col quickOnly hide" style="justify-content:flex-end">
+      <label class="row" style="margin-top:24px;gap:8px">
+        <input id="keepSameBin" type="checkbox" checked>
+        <span class="small">Keep same bin for next scan</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row">
+    <div class="kpi">
+      <div class="label">CURRENT BIN</div>
+      <div class="value mono" id="currentBinDisplay">—</div>
+      <div class="subv" id="currentBinSub">Enter Zone + Starting Bay to begin</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">LAST SCAN</div>
+      <div class="value" id="lastScanTitle" style="font-size:24px">—</div>
+      <div class="subv mono" id="lastScanBin">Assigned: —</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">SESSION INFO</div>
+      <div class="subv mono" id="sessionInfo" style="font-size:15px;color:#0f172a">
+        Mode: BULK<br>
+        Current Bin: —<br>
+        Items In Bin: 0<br>
+        Assignments: 0
+      </div>
+    </div>
+  </div>
+
+  <div class="panelGrid">
+    <div class="panel sequenceOnly">
+      <div class="panelHead">
+        <div class="panelTitle">CURRENT BIN CONTENTS</div>
+        <div class="row">
+          <span id="binItemCountBadge" class="badge info">0 items</span>
+          <button class="btn btnSoft" type="button" onclick="clearCurrentBinOnly()">Clear Current Bin Only</button>
+        </div>
+      </div>
+      <div id="currentBinContents" class="contentsList"></div>
+    </div>
+
+    <div class="panel sequenceOnly">
+      <div class="panelHead">
+        <div class="panelTitle">BIN ACTIONS</div>
+      </div>
+      <div class="actionStack">
+        <button id="doneWithBinBtn" class="btn btnPrimary" type="button" onclick="doneWithThisBin()">Done With This Bin</button>
+        <button class="btn" type="button" onclick="scanFocus()">Focus Scan Box</button>
+      </div>
+      <div style="height:10px"></div>
+      <div class="noteBox">
+        Scan all SKUs for the current bin, then click <b>Done With This Bin</b> to advance to the next bin.<br><br>
+        <span class="warnText">Control codes</span><br>
+        <span class="badge warn mono">LW-END-SHELF</span>
+        <span class="badge info mono">LW-END-BAY</span><br><br>
+        Control codes will advance immediately, even if the current bin already has items.
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row">
+    <div style="flex:1;min-width:320px">
+      <div class="small">Scan item (barcode or SKU) or scan control barcode</div>
+      <input id="assignScan" class="big" placeholder="Scan item + Enter" autofocus />
+    </div>
+
+    <div class="col">
+      <div class="small">&nbsp;</div>
+      <button class="btn btnPrimary" type="button" onclick="addAssignment()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div class="small">Assignments</div>
+    <div class="small" id="rowCount">0 rows</div>
+  </div>
+
+  <div class="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="colNum">#</th>
+          <th class="colVar">Variant ID</th>
+          <th class="colBarcode">Barcode</th>
+          <th class="colWhBin">WH Bin</th>
+          <th class="colSku">SKU</th>
+          <th class="colTitle">Title</th>
+          <th class="colZone">Zone</th>
+          <th class="colBay">Bay</th>
+          <th class="colShelf">Shelf</th>
+          <th class="colBinPos">Bin Pos</th>
+          <th class="colAction"></th>
+        </tr>
+      </thead>
+      <tbody id="assignTable"></tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row">
+    <button class="btn btnDark" onclick="downloadShopifyCSV()">Shopify Bin Upload CSV</button>
+    <button class="btn" onclick="downloadWorkingCSV()">Working CSV</button>
+    <button class="btn" onclick="downloadProductLabelCSV()">Product Labels CSV</button>
+    <button class="btn" onclick="downloadBinLabelCSV()">Bin Labels CSV</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const CSV_URL = '../pickle-data.csv';
+
+const COL_BARCODE = 'Variant Barcode';
+const COL_SKU = 'Variant SKU';
+const COL_TITLE = 'Title';
+
+const VARIANT_ID_CANDIDATES = [
+  'Variant ID','Variant Id','variant_id','variant id'
+];
+
+const END_SHELF_CODE = 'LW-END-SHELF';
+const END_BAY_CODE = 'LW-END-BAY';
+
+const STATE_KEY = 'livewell:binassign:v15';
+
+let rows = [];
+let dataLoaded = false;
+
+let mode = 'bulk';
+let assignments = [];
+let history = [];
+let nextRowId = 1;
+
+let currentZone = '';
+let currentBay = 1;
+let currentShelf = 1;
+let currentBinNum = 1;
+
+function pad2(v){
+  const cleaned = String(v ?? '').replace(/\D/g,'');
+  return cleaned ? cleaned.padStart(2,'0').slice(-2) : '01';
+}
+function n(v){
+  const x = Number(String(v ?? '').trim());
+  return Number.isFinite(x) ? Math.floor(x) : 0;
+}
+function csvEscape(s){
+  s = String(s ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function setCsvStatus(text, kind='warn'){
+  const el = document.getElementById('csvStatus');
+  el.textContent = text;
+  el.className = 'badge ' + kind;
+}
+function setStatus(text, kind='info'){
+  const el = document.getElementById('statusBadge');
+  el.textContent = text;
+  el.className = 'badge ' + kind;
+}
+function setDraftStatus(text){
+  document.getElementById('draftStatus').textContent = text;
+}
+function setDuplicateBadge(text='', kind='warn', show=false){
+  const el = document.getElementById('duplicateBadge');
+  if(!show){
+    el.className = 'badge hide';
+    el.textContent = 'Duplicate';
+    return;
+  }
+  el.textContent = text;
+  el.className = 'badge ' + kind;
+}
+function getVariantId(row){
+  for(const k of VARIANT_ID_CANDIDATES){
+    if(row[k]){
+      const v = String(row[k]).trim();
+      if(v) return v;
+    }
+  }
+  return '';
+}
+function parseCSV(text){
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+  const out = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n'){
+        row.push(field); field = '';
+        if(row.length > 1 || (row.length === 1 && row[0].trim() !== '')) out.push(row);
+        row = [];
+      } else field += c;
+    }
+  }
+  row.push(field);
+  if(row.length > 1 || (row.length === 1 && row[0].trim() !== '')) out.push(row);
+
+  if(!out.length) return { headers:[], records:[] };
+
+  const headers = out[0].map(h => String(h ?? '').trim());
+  const records = out.slice(1).map(r=>{
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = String(r[i] ?? '').trim());
+    return obj;
+  });
+  return { headers, records };
+}
+async function loadCSV(){
+  try{
+    setCsvStatus('CSV: Loading…','warn');
+    const res = await fetch(CSV_URL + '?v=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const parsed = parseCSV(text);
+    rows = parsed.records || [];
+    dataLoaded = true;
+    setCsvStatus(`CSV: Loaded (${rows.length} rows)`,'ok');
+    restoreState();
+  }catch(e){
+    rows = [];
+    dataLoaded = false;
+    setCsvStatus('CSV: Failed','bad');
+    alert('Could not load pickle-data.csv');
+  }
+}
+function findRow(q){
+  const needle = String(q || '').trim();
+  if(!needle) return null;
+  return rows.find(r =>
+    String(r[COL_BARCODE] || '').trim() === needle ||
+    String(r[COL_SKU] || '').trim() === needle
+  ) || null;
+}
+function buildWhBin(zone, bay, shelf, binNum){
+  return `${String(zone).trim().toUpperCase()}-${pad2(bay)}-${pad2(shelf)}-${pad2(binNum)}`;
+}
+function currentBinString(){
+  if(mode === 'quick'){
+    return String(document.getElementById('quickBinInput').value || '').trim().toUpperCase() || '—';
+  }
+  if(!currentZone) return '—';
+  return buildWhBin(currentZone, currentBay, currentShelf, currentBinNum);
+}
+function snapshotCounters(){
+  return {
+    zone: currentZone,
+    bay: currentBay,
+    shelf: currentShelf,
+    binNum: currentBinNum
+  };
+}
+function restoreCounters(s){
+  currentZone = s.zone || '';
+  currentBay = Math.max(1, Number(s.bay || 1));
+  currentShelf = Math.max(1, Number(s.shelf || 1));
+  currentBinNum = Math.max(1, Number(s.binNum || 1));
+}
+function syncInputsFromState(){
+  document.getElementById('zoneInput').value = currentZone || '';
+  document.getElementById('bayInput').value = pad2(currentBay);
+  document.getElementById('partialShelfInput').value = pad2(currentShelf);
+  document.getElementById('partialBinInput').value = pad2(currentBinNum);
+}
+function syncStateFromInputs(){
+  currentZone = String(document.getElementById('zoneInput').value || '').trim().toUpperCase();
+  currentBay = Math.max(1, n(document.getElementById('bayInput').value || 1) || 1);
+
+  if(mode === 'partial'){
+    currentShelf = Math.max(1, n(document.getElementById('partialShelfInput').value || 1) || 1);
+    currentBinNum = Math.max(1, n(document.getElementById('partialBinInput').value || 1) || 1);
+  } else {
+    if(currentShelf < 1) currentShelf = 1;
+    if(currentBinNum < 1) currentBinNum = 1;
+  }
+}
+function isSequenceMode(){
+  return mode === 'bulk' || mode === 'partial';
+}
+function getCurrentBinItems(){
+  if(!isSequenceMode()) return [];
+  const bin = currentBinString();
+  if(!bin || bin === '—') return [];
+  return assignments.filter(a => String(a.bin || '').trim().toUpperCase() === bin);
+}
+function hasCurrentBinItems(){
+  return getCurrentBinItems().length > 0;
+}
+function currentBinHasDuplicate(row){
+  const items = getCurrentBinItems();
+  const barcode = String(row?.[COL_BARCODE] || '').trim();
+  const sku = String(row?.[COL_SKU] || '').trim();
+  return items.some(a =>
+    (barcode && a.barcode === barcode) ||
+    (sku && a.sku === sku)
+  );
+}
+function advanceToNextBin(){
+  currentBinNum += 1;
+}
+function moveToNextShelf(){
+  currentShelf += 1;
+  currentBinNum = 1;
+}
+function moveToNextBay(){
+  currentBay += 1;
+  currentShelf = 1;
+  currentBinNum = 1;
+}
+function scanFocus(){
+  document.getElementById('assignScan').focus();
+}
+function setMode(nextMode){
+  mode = nextMode === 'quick' ? 'quick' : nextMode === 'partial' ? 'partial' : 'bulk';
+
+  document.getElementById('modeBulkBtn').classList.toggle('active', mode === 'bulk');
+  document.getElementById('modePartialBtn').classList.toggle('active', mode === 'partial');
+  document.getElementById('modeQuickBtn').classList.toggle('active', mode === 'quick');
+
+  document.querySelectorAll('.bulkOnly').forEach(el => el.classList.toggle('hide', mode !== 'bulk'));
+  document.querySelectorAll('.partialOnly').forEach(el => el.classList.toggle('hide', mode !== 'partial'));
+  document.querySelectorAll('.quickOnly').forEach(el => el.classList.toggle('hide', mode !== 'quick'));
+  document.querySelectorAll('.sequenceOnly').forEach(el => el.classList.toggle('hide', !isSequenceMode()));
+
+  syncInputsFromState();
+  updateDisplays();
+  render();
+  saveState();
+}
+function renderCurrentBinContents(){
+  const wrap = document.getElementById('currentBinContents');
+  const items = getCurrentBinItems();
+  document.getElementById('binItemCountBadge').textContent = `${items.length} item${items.length === 1 ? '' : 's'}`;
+
+  if(!isSequenceMode()){
+    wrap.innerHTML = '';
+    return;
+  }
+
+  if(!items.length){
+    wrap.innerHTML = `<div class="emptyState">No items scanned into this bin yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = items.map(a => `
+    <div class="contentsItem">
+      <div>
+        <div class="name">${escapeHtml(a.title || a.sku || a.barcode || 'Untitled')}</div>
+        <div class="meta mono">
+          SKU: ${escapeHtml(a.sku || '—')}<br>
+          Barcode: ${escapeHtml(a.barcode || '—')}<br>
+          Variant ID: ${escapeHtml(a.variantId || '—')}
+        </div>
+      </div>
+      <div>
+        <button class="miniRemove" type="button" onclick="removeRow(${a.id})">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+function updateDisplays(){
+  document.getElementById('shelfDisplay').textContent = pad2(currentShelf);
+  document.getElementById('binNumDisplay').textContent = pad2(currentBinNum);
+  document.getElementById('currentBinDisplay').textContent = currentBinString();
+
+  const itemsInCurrentBin = getCurrentBinItems().length;
+
+  if(mode === 'bulk'){
+    document.getElementById('currentBinSub').textContent =
+      currentZone
+        ? 'Scan items into this bin, then click Done With This Bin'
+        : 'Enter Zone + Starting Bay to begin';
+  } else if(mode === 'partial'){
+    document.getElementById('currentBinSub').textContent =
+      currentZone
+        ? 'Scan items into this bin, then click Done With This Bin'
+        : 'Enter Zone + Bay + Shelf + Bin to begin';
+  } else {
+    document.getElementById('currentBinSub').textContent = 'Exact manual bin for Quick Add mode';
+  }
+
+  const last = assignments[assignments.length - 1];
+  document.getElementById('lastScanTitle').textContent = last ? (last.title || last.sku || last.barcode || 'Last row') : '—';
+  document.getElementById('lastScanBin').textContent = 'Assigned: ' + (last ? (last.bin || '—') : '—');
+
+  document.getElementById('sessionInfo').innerHTML =
+    `Mode: ${mode.toUpperCase()}<br>` +
+    `Current Bin: ${currentBinString()}<br>` +
+    `Items In Bin: ${isSequenceMode() ? itemsInCurrentBin : '—'}<br>` +
+    `Assignments: ${assignments.length}`;
+
+  document.getElementById('rowCount').textContent = `${assignments.length} row${assignments.length === 1 ? '' : 's'}`;
+
+  renderCurrentBinContents();
+  syncInputsFromState();
+}
+function handleSequenceControl(upper, scanEl){
+
+  if(hasCurrentBinItems()){
+    setStatus('Advancing despite items in bin','warn');
+  }
+
+  if(upper === END_SHELF_CODE){
+    const before = snapshotCounters();
+
+    currentShelf += 1;
+    currentBinNum = 1;
+
+    const after = snapshotCounters();
+
+    history.push({ type:'control', control:'end_shelf', before, after });
+    setStatus('END OF SHELF → moved to next shelf','warn');
+    scanEl.value = '';
+    updateDisplays();
+    render();
+    saveState();
+    scanEl.focus();
+    return true;
+  }
+
+  if(upper === END_BAY_CODE){
+    const before = snapshotCounters();
+
+    currentBay += 1;
+    currentShelf = 1;
+    currentBinNum = 1;
+
+    const after = snapshotCounters();
+
+    history.push({ type:'control', control:'end_bay', before, after });
+    setStatus('END OF BAY → moved to next bay','info');
+    scanEl.value = '';
+    syncInputsFromState();
+    updateDisplays();
+    render();
+    saveState();
+    scanEl.focus();
+    return true;
+  }
+
+  return false;
+}
+function addAssignment(){
+  if(!dataLoaded){
+    alert('CSV is still loading.');
+    return;
+  }
+
+  syncStateFromInputs();
+
+  const scanEl = document.getElementById('assignScan');
+  const quickBinEl = document.getElementById('quickBinInput');
+  const scan = String(scanEl.value || '').trim();
+
+  if(!scan) return;
+
+  if(isSequenceMode()){
+    if(!currentZone){
+      alert('Enter Zone first.');
+      document.getElementById('zoneInput').focus();
+      return;
+    }
+    if(!document.getElementById('bayInput').value.trim()){
+      alert('Enter Starting Bay first.');
+      document.getElementById('bayInput').focus();
+      return;
+    }
+    if(mode === 'partial'){
+      if(!document.getElementById('partialShelfInput').value.trim()){
+        alert('Enter Starting Shelf first.');
+        document.getElementById('partialShelfInput').focus();
+        return;
+      }
+      if(!document.getElementById('partialBinInput').value.trim()){
+        alert('Enter Starting Bin first.');
+        document.getElementById('partialBinInput').focus();
+        return;
+      }
+    }
+
+    const upper = scan.toUpperCase();
+    if(handleSequenceControl(upper, scanEl)) return;
+
+    const row = findRow(scan);
+    if(!row){
+      setStatus('Not found: ' + scan,'bad');
+      setDuplicateBadge();
+      return;
+    }
+
+    const assignedBin = buildWhBin(currentZone, currentBay, currentShelf, currentBinNum);
+    const isDup = currentBinHasDuplicate(row);
+
+    const entry = {
+      id: nextRowId++,
+      mode,
+      variantId: getVariantId(row),
+      barcode: String(row[COL_BARCODE] || '').trim(),
+      sku: String(row[COL_SKU] || '').trim(),
+      title: String(row[COL_TITLE] || '').trim(),
+      zone: currentZone,
+      bay: pad2(currentBay),
+      shelf: pad2(currentShelf),
+      binPos: pad2(currentBinNum),
+      bin: assignedBin
+    };
+
+    assignments.push(entry);
+
+    history.push({
+      type:'product',
+      entryId: entry.id,
+      bin: assignedBin
+    });
+
+    if(isDup){
+      setStatus('Assigned to ' + assignedBin + ' — duplicate in current bin','warn');
+      setDuplicateBadge('Duplicate in current bin','warn',true);
+    }else{
+      setStatus('Assigned to ' + assignedBin,'ok');
+      setDuplicateBadge();
+    }
+
+    scanEl.value = '';
+    updateDisplays();
+    render();
+    saveState();
+    scanEl.focus();
+    return;
+  }
+
+  const exactBin = String(quickBinEl.value || '').trim().toUpperCase();
+  if(!exactBin){
+    alert('Enter WH Bin first in Quick Add mode.');
+    quickBinEl.focus();
+    return;
+  }
+
+  const row = findRow(scan);
+  if(!row){
+    setStatus('Not found: ' + scan,'bad');
+    setDuplicateBadge();
+    return;
+  }
+
+  const parts = exactBin.split('-');
+  const qZone = parts[0] || '';
+  const qBay = parts[1] || '';
+  const qShelf = parts[2] || '';
+  const qBinPos = parts[3] || '';
+
+  const entry = {
+    id: nextRowId++,
+    mode: 'quick',
+    variantId: getVariantId(row),
+    barcode: String(row[COL_BARCODE] || '').trim(),
+    sku: String(row[COL_SKU] || '').trim(),
+    title: String(row[COL_TITLE] || '').trim(),
+    zone: qZone,
+    bay: qBay,
+    shelf: qShelf,
+    binPos: qBinPos,
+    bin: exactBin
+  };
+
+  assignments.push(entry);
+  history.push({ type:'product_quick', entryId: entry.id });
+  setStatus('Assigned to ' + exactBin,'ok');
+  setDuplicateBadge();
+
+  scanEl.value = '';
+  if(!document.getElementById('keepSameBin').checked){
+    quickBinEl.value = '';
+  }
+
+  updateDisplays();
+  render();
+  saveState();
+  scanEl.focus();
+}
+function doneWithThisBin(){
+  if(!isSequenceMode()){
+    setStatus('Done With This Bin only applies to Bulk and Partial','warn');
+    return;
+  }
+  if(!currentZone){
+    setStatus('Enter Zone first','warn');
+    return;
+  }
+
+  const before = snapshotCounters();
+  const finishedBin = currentBinString();
+  const itemCount = getCurrentBinItems().length;
+
+  advanceToNextBin();
+
+  const after = snapshotCounters();
+  history.push({
+    type:'bin_done',
+    before,
+    after,
+    finishedBin,
+    itemCount
+  });
+
+  setStatus(`Done with ${finishedBin} — advanced to ${currentBinString()}`,'info');
+  setDuplicateBadge();
+  updateDisplays();
+  render();
+  saveState();
+  scanFocus();
+}
+function undoLast(){
+  if(!history.length){
+    setStatus('Nothing to undo','warn');
+    return;
+  }
+
+  const last = history.pop();
+
+  if(last.type === 'product' || last.type === 'product_quick'){
+    const idx = assignments.findIndex(a => a.id === last.entryId);
+    if(idx >= 0) assignments.splice(idx, 1);
+  } else if(last.type === 'control' || last.type === 'bin_done'){
+    if(last.before) restoreCounters(last.before);
+    syncInputsFromState();
+  } else if(last.type === 'clear_current_bin'){
+    if(Array.isArray(last.removedEntries) && last.removedEntries.length){
+      assignments.push(...last.removedEntries);
+      assignments.sort((a,b) => a.id - b.id);
+    }
+  }
+
+  setStatus('Last action undone','warn');
+  setDuplicateBadge();
+  updateDisplays();
+  render();
+  saveState();
+  document.getElementById('assignScan').focus();
+}
+function removeRow(id){
+  const idx = assignments.findIndex(a => a.id === id);
+  if(idx < 0) return;
+  assignments.splice(idx, 1);
+  setStatus('Row removed','warn');
+  setDuplicateBadge();
+  render();
+  saveState();
+}
+function clearCurrentBinOnly(){
+  if(!isSequenceMode()){
+    setStatus('Clear Current Bin Only only applies to Bulk and Partial','warn');
+    return;
+  }
+
+  const bin = currentBinString();
+  const toRemove = assignments.filter(a => String(a.bin || '').trim().toUpperCase() === bin);
+  if(!toRemove.length){
+    setStatus('Current bin is already empty','warn');
+    return;
+  }
+
+  if(!confirm(`Remove ${toRemove.length} row(s) from ${bin}?`)) return;
+
+  const removedIds = new Set(toRemove.map(x => x.id));
+  assignments = assignments.filter(a => !removedIds.has(a.id));
+
+  history.push({
+    type:'clear_current_bin',
+    bin,
+    removedEntries: structuredCloneSafe(toRemove)
+  });
+
+  setStatus(`Cleared ${toRemove.length} row(s) from ${bin}`,'warn');
+  setDuplicateBadge();
+  updateDisplays();
+  render();
+  saveState();
+  scanFocus();
+}
+function render(){
+  const tbody = document.getElementById('assignTable');
+  tbody.innerHTML = '';
+
+  const lastRowId = assignments.length ? assignments[assignments.length - 1].id : null;
+  const activeBin = isSequenceMode() ? currentBinString() : '';
+
+  assignments.forEach((a, i) => {
+    const isLastRow = a.id === lastRowId;
+    const actionBtn = isLastRow
+      ? `<button class="rowUndo" type="button" onclick="undoLast()">Undo Last</button>`
+      : `<button class="rowRemove" type="button" onclick="removeRow(${a.id})">Remove Row</button>`;
+
+    const tr = document.createElement('tr');
+    const rowBin = String(a.bin || '').trim().toUpperCase();
+    if(activeBin && rowBin === activeBin){
+      tr.classList.add('activeBinRow');
+    }
+
+    tr.innerHTML = `
+      <td class="colNum">${i + 1}</td>
+      <td class="mono colVar">${escapeHtml(a.variantId || '')}</td>
+      <td class="mono colBarcode">${escapeHtml(a.barcode || '')}</td>
+      <td class="colWhBin"><input class="cellInput" value="${escapeHtml(a.bin || '')}" onchange="updateBin(${a.id}, this.value)"></td>
+      <td class="mono colSku">${escapeHtml(a.sku || '')}</td>
+      <td class="colTitle">${escapeHtml(a.title || '')}</td>
+      <td class="mono colZone">${escapeHtml(a.zone || '')}</td>
+      <td class="mono colBay">${escapeHtml(a.bay || '')}</td>
+      <td class="mono colShelf">${escapeHtml(a.shelf || '')}</td>
+      <td class="mono colBinPos">${escapeHtml(a.binPos || '')}</td>
+      <td class="colAction">${actionBtn}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  updateDisplays();
+}
+function updateBin(id, value){
+  const a = assignments.find(x => x.id === id);
+  if(!a) return;
+
+  a.bin = String(value || '').trim().toUpperCase();
+
+  const parts = a.bin.split('-');
+  a.zone = parts[0] || '';
+  a.bay = parts[1] || '';
+  a.shelf = parts[2] || '';
+  a.binPos = parts[3] || '';
+
+  setStatus('WH Bin updated','info');
+  setDuplicateBadge();
+  saveState();
+  render();
+}
+function clearAssignments(){
+  if(!confirm('Clear assignment list and reset history?')) return;
+  assignments = [];
+  history = [];
+  nextRowId = 1;
+
+  if(mode === 'bulk'){
+    currentShelf = 1;
+    currentBinNum = 1;
+  } else if(mode === 'partial'){
+    currentShelf = Math.max(1, n(document.getElementById('partialShelfInput').value || 1) || 1);
+    currentBinNum = Math.max(1, n(document.getElementById('partialBinInput').value || 1) || 1);
+  } else {
+    currentShelf = 1;
+    currentBinNum = 1;
+  }
+
+  setStatus('Cleared','warn');
+  setDuplicateBadge();
+  render();
+  saveState();
+}
+function escapeHtml(s){
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function structuredCloneSafe(v){
+  return JSON.parse(JSON.stringify(v));
+}
+function currentZoneBayForFiles(){
+  const z = currentZone || (assignments[0]?.zone || 'ZONE');
+  const b = pad2(currentBay || assignments[0]?.bay || 1);
+  return { z: String(z).toUpperCase(), b };
+}
+function downloadFile(name, text){
+  const blob = new Blob([text], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadShopifyCSV(){
+  let csv = 'Variant Command,Variant ID,Variant Metafield: custom.wh_bin\n';
+  assignments.forEach(a => {
+    if(a.variantId && a.bin){
+      const variantIdForExcel = `="${String(a.variantId).trim()}"`;
+      csv += [
+        csvEscape('UPDATE'),
+        csvEscape(variantIdForExcel),
+        csvEscape(a.bin)
+      ].join(',') + '\n';
+    }
+  });
+  const { z, b } = currentZoneBayForFiles();
+  downloadFile(`SHOPIFY-${z}-${b}.csv`, csv);
+}
+function downloadWorkingCSV(){
+  let csv = "zone,bay,shelf,bin_position,wh_bin,variant_id,barcode,sku,title\n";
+  assignments.forEach(a => {
+    csv += [
+      csvEscape(a.zone),
+      csvEscape(a.bay),
+      csvEscape(a.shelf),
+      csvEscape(a.binPos),
+      csvEscape(a.bin),
+      csvEscape(a.variantId),
+      csvEscape(a.barcode),
+      csvEscape(a.sku),
+      csvEscape(a.title)
+    ].join(',') + "\n";
+  });
+  const { z, b } = currentZoneBayForFiles();
+  downloadFile(`WORKING-${z}-${b}.csv`, csv);
+}
+function downloadProductLabelCSV(){
+  let csv = "sku,title,barcode\n";
+  assignments.forEach(a => {
+    csv += `${csvEscape(a.sku)},${csvEscape(a.title)},${csvEscape(a.barcode)}\n`;
+  });
+  const { z, b } = currentZoneBayForFiles();
+  downloadFile(`PRODUCT-${z}-${b}.csv`, csv);
+}
+function downloadBinLabelCSV(){
+  const seen = new Set();
+  let csv = "bin,barcode\n";
+  assignments.forEach(a => {
+    const bin = String(a.bin || '').trim().toUpperCase();
+    if(!bin || seen.has(bin)) return;
+    seen.add(bin);
+    csv += `${csvEscape(bin)},${csvEscape(bin)}\n`;
+  });
+  const { z, b } = currentZoneBayForFiles();
+  downloadFile(`BIN-${z}-${b}.csv`, csv);
+}
+function saveState(){
+  const state = {
+    mode,
+    assignments,
+    history,
+    nextRowId,
+    currentZone,
+    currentBay,
+    currentShelf,
+    currentBinNum,
+    zoneInput: document.getElementById('zoneInput').value,
+    bayInput: document.getElementById('bayInput').value,
+    partialShelfInput: document.getElementById('partialShelfInput').value,
+    partialBinInput: document.getElementById('partialBinInput').value,
+    quickBinInput: document.getElementById('quickBinInput').value,
+    keepSameBin: document.getElementById('keepSameBin').checked
+  };
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  setDraftStatus('Draft saved');
+}
+function restoreState(){
+  const raw = localStorage.getItem(STATE_KEY);
+  if(!raw){
+    updateDisplays();
+    render();
+    setDraftStatus('No saved draft');
+    return;
+  }
+  try{
+    const s = JSON.parse(raw);
+    mode = s.mode === 'quick' ? 'quick' : s.mode === 'partial' ? 'partial' : 'bulk';
+    assignments = Array.isArray(s.assignments) ? s.assignments : [];
+    history = Array.isArray(s.history) ? s.history : [];
+    nextRowId = Number(s.nextRowId || 1);
+    currentZone = s.currentZone || '';
+    currentBay = Math.max(1, Number(s.currentBay || 1));
+    currentShelf = Math.max(1, Number(s.currentShelf || 1));
+    currentBinNum = Math.max(1, Number(s.currentBinNum || 1));
+
+    document.getElementById('zoneInput').value = s.zoneInput || currentZone || '';
+    document.getElementById('bayInput').value = s.bayInput || pad2(currentBay);
+    document.getElementById('partialShelfInput').value = s.partialShelfInput || pad2(currentShelf);
+    document.getElementById('partialBinInput').value = s.partialBinInput || pad2(currentBinNum);
+    document.getElementById('quickBinInput').value = s.quickBinInput || '';
+    document.getElementById('keepSameBin').checked = s.keepSameBin !== false;
+
+    setMode(mode);
+    render();
+    setDraftStatus('Draft restored');
+  }catch{
+    updateDisplays();
+    render();
+    setDraftStatus('Draft restore failed');
+  }
+}
+
+document.getElementById('assignScan').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    addAssignment();
+  }
+});
+document.getElementById('quickBinInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('assignScan').focus();
+  }
+});
+document.getElementById('zoneInput').addEventListener('input', () => {
+  syncStateFromInputs();
+  updateDisplays();
+  saveState();
+});
+document.getElementById('bayInput').addEventListener('input', () => {
+  syncStateFromInputs();
+  updateDisplays();
+  saveState();
+});
+document.getElementById('partialShelfInput').addEventListener('input', () => {
+  syncStateFromInputs();
+  updateDisplays();
+  saveState();
+});
+document.getElementById('partialBinInput').addEventListener('input', () => {
+  syncStateFromInputs();
+  updateDisplays();
+  saveState();
+});
+document.getElementById('quickBinInput').addEventListener('input', () => {
+  updateDisplays();
+  saveState();
+});
+document.getElementById('keepSameBin').addEventListener('change', saveState);
+
+loadCSV();
+setMode('bulk');
+updateDisplays();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scan / Putaway</title>
+<style>
+  :root{
+    --bg:#f7f9fc;
+    --card:#fff;
+    --text:#0f172a;
+    --muted:#475569;
+    --line:#e2e8f0;
+    --good:#166534; --goodbg:#dcfce7;
+    --bad:#7f1d1d;  --badbg:#fee2e2;
+    --warn:#9a3412; --warnbg:#ffedd5;
+    --btn:#fff;
+    --shadow:0 2px 10px rgba(0,0,0,.06);
+  }
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);margin:0;padding:18px;color:var(--text)}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  /* TOP NAV */
+  .topnav{
+    display:flex; gap:10px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:50;
+    background:var(--bg);
+    padding:10px 0;
+    margin:-10px 0 14px;
+  }
+  .topnav a{
+    display:inline-block;
+    text-decoration:none;
+    font-weight:900;
+    color:var(--text);
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+  }
+  .topnav a:hover{background:#f1f5f9}
+
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow);border:1px solid rgba(226,232,240,.7)}
+  h1{margin:0 0 6px;font-size:30px}
+  .sub{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.35}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:980px){ .grid2{grid-template-columns:1.2fr .8fr} }
+  input, select{font-size:22px;padding:12px 12px;width:100%;border-radius:14px;border:1px solid #cbd5e1;box-sizing:border-box;background:#fff}
+  select{font-size:16px;font-weight:900}
+  label{display:block;font-size:12px;color:#64748b;font-weight:900;margin:6px 0}
+  .btn{padding:10px 12px;border-radius:12px;border:1px solid var(--line);font-weight:900;cursor:pointer;background:var(--btn)}
+  .btn:active{transform:translateY(1px)}
+  .btnPrimary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+  .btnDanger{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
+  .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:900;vertical-align:middle}
+  .good{background:var(--goodbg);color:var(--good)}
+  .bad{background:var(--badbg);color:var(--bad)}
+  .warn{background:var(--warnbg);color:var(--warn)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .hr{height:1px;background:var(--line);margin:14px 0}
+  .bigNum{font-size:64px;font-weight:1000;line-height:1}
+  .smallMeta{font-size:12px;color:#64748b;margin-top:4px}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+  th,td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
+  tbody tr:nth-child(even){background:#f9fafb}
+  .toast{
+    position:fixed;left:18px;bottom:18px;background:#111827;color:#fff;
+    padding:10px 12px;border-radius:12px;font-weight:900;font-size:13px;opacity:0;transform:translateY(8px);
+    transition:all .18s ease;max-width:520px;box-shadow:0 10px 24px rgba(0,0,0,.18)
+  }
+  .toast.show{opacity:1;transform:translateY(0)}
+  .kpi{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .pill{border:1px solid rgba(226,232,240,.9);border-radius:999px;padding:6px 10px;background:#fff;font-weight:900;font-size:12px;color:#334155}
+  .fieldgrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px}
+  @media(min-width:980px){ .fieldgrid{grid-template-columns:repeat(4, 1fr)} }
+
+  .checkRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .checkRow label{margin:0;font-size:12px;color:#334155;font-weight:900;display:flex;align-items:center;gap:8px}
+  .checkRow input[type="checkbox"]{width:auto;transform:scale(1.15)}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <div class="row">
+      <a href="../index.html"><button>🏠 Home</button></a>
+      <a href="../Picks/index.html"><button>📋 Picks</button></a>
+      <a href="../putaway/index.html"><button class="active">📦 Putaway</button></a>
+      <a href="../bin/index.html"><button>📍 Bin Lookup</button></a>
+      <a href="../manual/index.html"><button>📘 Manual</button></a>
+      <div class="spacer"></div>
+      <div class="small">Ops Tools</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h1>Scan / Putaway</h1>
+    <p class="sub">
+      Auto-loads <strong>pickle-data.csv</strong>. Scan SKU/barcode to see needed-to-max and WH bin.
+      Bin updates are <strong>auto-queued on every scan</strong>. Blank bins are allowed.
+      <br><strong>Draft saving:</strong> this page auto-saves your progress so switching tools / refresh / closing the tab won’t lose work.
+      <br><strong>Floor putaway:</strong> scan the tub once, then export a floor-walking CSV sorted by floor location.
+    </p>
+
+    <div class="row" style="align-items:flex-start">
+      <div style="flex:2">
+        <label>Scan (barcode or SKU) and press Enter</label>
+        <input id="scan" placeholder="Scan barcode or SKU and press Enter" autofocus />
+      </div>
+      <div style="flex:1;min-width:260px">
+        <label>Status</label>
+        <div id="status"><span class="badge bad">Not loaded</span> Waiting…</div>
+        <div id="meta" class="sub" style="margin-top:8px"></div>
+        <div class="kpi" id="kpis"></div>
+      </div>
+    </div>
+
+    <!-- Draft controls -->
+    <div class="row" style="margin-top:10px">
+      <button class="btn" type="button" onclick="draftSaveNow()">Save Draft</button>
+      <button class="btn" type="button" onclick="draftLoadNow()">Load Draft</button>
+      <button class="btn" type="button" onclick="draftExport()">Export Draft (JSON)</button>
+      <button class="btn" type="button" onclick="draftImport()">Import Draft (JSON)</button>
+      <button class="btn btnDanger" type="button" onclick="draftClear()">Clear Draft</button>
+      <span id="draftStatus" class="sub"></span>
+    </div>
+
+    <div class="hr"></div>
+
+    <div id="result"></div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- LEFT: EDIT + UPDATES -->
+    <div class="card" id="editCard" style="display:none">
+      <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-weight:1000;font-size:16px">Update fields (optional)</div>
+          <div class="sub" style="margin:6px 0 0">
+            You can update only one field (leave others blank). Bin is auto-queued on scan and auto-updated as you type.
+          </div>
+        </div>
+        <div>
+          <button class="btn btnDanger" type="button" onclick="clearEdit()">Clear Fields</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="fieldgrid">
+        <div>
+          <label>Variant ID (auto)</label>
+          <input id="inVariantId" class="mono" disabled />
+        </div>
+        <div>
+          <label>WH Bin Location (blank allowed)</label>
+          <input id="inBin" class="mono" placeholder="BB01-S01-B01 (or leave blank to clear)" />
+        </div>
+        <div>
+          <label>Variant Weight</label>
+          <input id="inWeight" class="mono" placeholder="e.g. 0.25" />
+        </div>
+        <div></div>
+
+        <div>
+          <label>Plymouth Min</label>
+          <input id="inMinPly" class="mono" placeholder="leave blank if no change" />
+        </div>
+        <div>
+          <label>Plymouth Max</label>
+          <input id="inMaxPly" class="mono" placeholder="leave blank if no change" />
+        </div>
+        <div>
+          <label>GH Min</label>
+          <input id="inMinGh" class="mono" placeholder="leave blank if no change" />
+        </div>
+        <div>
+          <label>GH Max</label>
+          <input id="inMaxGh" class="mono" placeholder="leave blank if no change" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn btnPrimary" type="button" onclick="queueMinMax()">Queue Min/Max Update</button>
+        <button class="btn btnPrimary" type="button" onclick="queueWeight()">Queue Weight Update</button>
+        <button class="btn btnPrimary" type="button" onclick="queueBin()">Queue Bin Update</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button class="btn btnPrimary" type="button" onclick="downloadMinMaxCSV()">Download Min/Max Updates CSV</button>
+        <button class="btn btnPrimary" type="button" onclick="downloadWeightCSV()">Download Weight Updates CSV</button>
+        <button class="btn btnPrimary" type="button" onclick="downloadBinCSV()">Download Bin Updates CSV</button>
+      </div>
+
+      <div class="checkRow">
+        <label><input type="checkbox" id="autoClearBinAfterDownload" /> Auto-clear Bin queue after downloading Bin Updates CSV</label>
+      </div>
+
+      <div class="sub" style="margin-top:10px">
+        Bin Updates CSV outputs only: <span class="mono">Variant ID</span> + <span class="mono">Variant Metafield: custom.wh_bin [single_line_text_field]</span>.
+      </div>
+    </div>
+
+    <!-- RIGHT: PUTAWAY -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div style="font-weight:1000;font-size:16px">Putaway Report</div>
+          <div class="sub">Scans log here automatically. Download warehouse CSV sorted by bin, or floor CSV sorted by floor location.</div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn" type="button" onclick="clearLog()">Clear Log</button>
+          <button class="btn btnDanger" type="button" onclick="clearBinQueue()">Clear Bin Queue</button>
+          <button class="btn btnDanger" type="button" onclick="newBatch()">New Batch</button>
+        </div>
+      </div>
+
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <div style="min-width:240px;flex:1">
+          <label>Floor Putaway Destination</label>
+          <select id="floorDestination">
+            <option value="plymouth">Plymouth</option>
+            <option value="green">Green Harbor</option>
+            <option value="both">Both / show both floor locations</option>
+          </select>
+        </div>
+        <div class="sub" style="margin:0;flex:2">
+          Floor CSV uses Shopify metafields:
+          <span class="mono">custom.floor_location_ply</span> and
+          <span class="mono">custom.floor_location_gh</span>.
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Bin</th><th>Barcode</th><th>Title</th></tr>
+        </thead>
+        <tbody id="log"></tbody>
+      </table>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn btnPrimary" type="button" onclick="downloadPutawayCSV()">Download Putaway CSV</button>
+        <button class="btn btnPrimary" type="button" onclick="downloadFloorPutawayCSV()">Download Floor Putaway CSV</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div style="font-weight:1000;font-size:16px;margin-bottom:6px">Queued updates preview</div>
+      <div class="sub">Bin updates auto-fill after each scan (and change live when you edit the bin field).</div>
+      <div id="queuePreview" style="margin-top:10px"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/** =========================
+ * CONFIG
+ * ========================= */
+const CSV_URL = '../pickle-data.csv';
+
+// Headers in pickle-data.csv (Matrixify/Shopify export)
+const COL_BARCODE    = 'Variant Barcode';
+const COL_SKU        = 'Variant SKU';
+const COL_TITLE      = 'Title';
+const COL_VARIANT_ID = 'Variant ID';
+
+const COL_INV_PLY    = 'Inventory Available: Plymouth';
+const COL_INV_GH     = 'Inventory Available: Green Harbor';
+
+const COL_MIN_PLY    = 'Variant Metafield: custom.minply [number_integer]';
+const COL_MAX_PLY    = 'Variant Metafield: custom.maxply [number_integer]';
+const COL_MIN_GH     = 'Variant Metafield: custom.mingh [number_integer]';
+const COL_MAX_GH     = 'Variant Metafield: custom.maxgh [number_integer]';
+
+const COL_WH_BIN     = 'Variant Metafield: custom.wh_bin [single_line_text_field]';
+const COL_WEIGHT     = 'Variant Weight';
+
+// Floor putaway location metafields.
+// Add these to pickle-data.csv / Matrixify export when you are ready.
+// The fallback names allow this to work if your CSV headers are simpler.
+const COL_FLOOR_PLY_PRIMARY = 'Variant Metafield: custom.floor_location_ply [single_line_text_field]';
+const COL_FLOOR_GH_PRIMARY  = 'Variant Metafield: custom.floor_location_gh [single_line_text_field]';
+const COL_FLOOR_PLY_FALLBACK = 'Floor Location Plymouth';
+const COL_FLOOR_GH_FALLBACK  = 'Floor Location Green Harbor';
+
+const COL_PRICE_PRIMARY = 'Variant Price';
+const COL_PRICE_FALLBACK = 'Price';
+
+let rows = [];
+let currentMatch = null;
+let binAutoHooked = false;
+
+// Queues (minimal export)
+const mmQueue = new Map();   // id -> {minPly?, maxPly?, minGh?, maxGh?}
+const wQueue  = new Map();   // id -> weight string
+const bQueue  = new Map();   // id -> bin string (can be blank)
+
+// Putaway log
+const putawayList = [];
+
+// ===============================
+// LIVEWELL STATE KIT (v1) - PUTAWAY
+// ===============================
+const STATE_KEY = 'livewell:putaway:v1';
+const STATE_VERSION = 1;
+const draftStatusEl = document.getElementById('draftStatus');
+
+function nowISO(){ return new Date().toISOString(); }
+
+function saveDraft(key, stateObj){
+  const payload = { _meta:{ version: STATE_VERSION, savedAt: nowISO() }, state: stateObj };
+  localStorage.setItem(key, JSON.stringify(payload));
+}
+
+function loadDraft(key){
+  const raw = localStorage.getItem(key);
+  if(!raw) return null;
+  try{
+    const payload = JSON.parse(raw);
+    if(!payload || !payload.state) return null;
+    return payload;
+  }catch{ return null; }
+}
+
+function clearDraft(key){ localStorage.removeItem(key); }
+
+function setDraftStatus(msg){ if(draftStatusEl) draftStatusEl.textContent = msg || ''; }
+
+function downloadJSON(filename, obj){
+  const text = JSON.stringify(obj, null, 2);
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function pickFile(accept){
+  return new Promise((resolve)=>{
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept || '.json,application/json';
+    input.onchange = () => resolve(input.files?.[0] || null);
+    input.click();
+  });
+}
+
+async function loadJSONFile(){
+  const file = await pickFile('.json,application/json');
+  if(!file) return null;
+  const text = await file.text();
+  return JSON.parse(text);
+}
+
+let _saveTimer = null;
+function scheduleSave(delayMs=150){
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=> {
+    try{
+      saveDraft(STATE_KEY, getState());
+      setDraftStatus(`Auto-saved ${new Date().toLocaleTimeString()}`);
+    }catch{}
+  }, delayMs);
+}
+function forceSaveNow(){
+  try{
+    saveDraft(STATE_KEY, getState());
+    setDraftStatus(`Saved ${new Date().toLocaleTimeString()}`);
+  }catch{}
+}
+
+function mapToEntries(m){ return Array.from(m.entries()); }
+function entriesToMap(entries){
+  const m = new Map();
+  if(Array.isArray(entries)){
+    for(const pair of entries){
+      if(Array.isArray(pair) && pair.length >= 2) m.set(pair[0], pair[1]);
+    }
+  }
+  return m;
+}
+
+function getState(){
+  // store edit fields so you can leave mid-item and come back
+  const edit = {
+    inVariantId: document.getElementById('inVariantId')?.value || '',
+    inBin: document.getElementById('inBin')?.value || '',
+    inWeight: document.getElementById('inWeight')?.value || '',
+    inMinPly: document.getElementById('inMinPly')?.value || '',
+    inMaxPly: document.getElementById('inMaxPly')?.value || '',
+    inMinGh: document.getElementById('inMinGh')?.value || '',
+    inMaxGh: document.getElementById('inMaxGh')?.value || '',
+    autoClearBinAfterDownload: document.getElementById('autoClearBinAfterDownload')?.checked || false,
+    floorDestination: document.getElementById('floorDestination')?.value || 'plymouth'
+  };
+
+  return {
+    mmQueue: mapToEntries(mmQueue),
+    wQueue: mapToEntries(wQueue),
+    bQueue: mapToEntries(bQueue),
+    putawayList: [...putawayList],
+    currentMatch: currentMatch ? {...currentMatch} : null,
+    editCardVisible: (document.getElementById('editCard')?.style.display !== 'none'),
+    edit
+  };
+}
+
+function applyState(st){
+  // clear existing structures
+  mmQueue.clear(); wQueue.clear(); bQueue.clear();
+  putawayList.length = 0;
+
+  const mm = entriesToMap(st.mmQueue);
+  const ww = entriesToMap(st.wQueue);
+  const bb = entriesToMap(st.bQueue);
+
+  for(const [k,v] of mm) mmQueue.set(k, v);
+  for(const [k,v] of ww) wQueue.set(k, v);
+  for(const [k,v] of bb) bQueue.set(k, v);
+
+  if(Array.isArray(st.putawayList)){
+    st.putawayList.forEach(x => putawayList.push(x));
+  }
+
+  currentMatch = st.currentMatch || null;
+
+  // restore edit fields (only if elements exist)
+  const e = st.edit || {};
+  const setVal = (id, val)=>{
+    const el = document.getElementById(id);
+    if(el) el.value = val ?? '';
+  };
+  setVal('inVariantId', e.inVariantId);
+  setVal('inBin', e.inBin);
+  setVal('inWeight', e.inWeight);
+  setVal('inMinPly', e.inMinPly);
+  setVal('inMaxPly', e.inMaxPly);
+  setVal('inMinGh', e.inMinGh);
+  setVal('inMaxGh', e.inMaxGh);
+
+  const autoEl = document.getElementById('autoClearBinAfterDownload');
+  if(autoEl) autoEl.checked = !!e.autoClearBinAfterDownload;
+
+  const floorDestEl = document.getElementById('floorDestination');
+  if(floorDestEl) floorDestEl.value = e.floorDestination || 'plymouth';
+
+  // show/hide edit card
+  const editCard = document.getElementById('editCard');
+  if(editCard){
+    editCard.style.display = st.editCardVisible ? 'block' : 'none';
+  }
+
+  // rebuild UI
+  rebuildPutawayTable();
+  renderQueues();
+}
+
+function draftSaveNow(){
+  saveDraft(STATE_KEY, getState());
+  setDraftStatus(`Saved ${new Date().toLocaleTimeString()}`);
+}
+
+function draftLoadNow(){
+  const payload = loadDraft(STATE_KEY);
+  if(!payload){ setDraftStatus('No draft found'); return; }
+  applyState(payload.state);
+  setDraftStatus(`Loaded draft (${new Date(payload._meta?.savedAt || Date.now()).toLocaleString()})`);
+}
+
+function draftClear(){
+  if(!confirm('Clear saved draft for Putaway?')) return;
+  clearDraft(STATE_KEY);
+  setDraftStatus('Draft cleared');
+}
+
+function draftExport(){
+  const payload = { _exportedAt: nowISO(), key: STATE_KEY, state: getState() };
+  downloadJSON(`LIVEWELL_PUTAWAY_DRAFT_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.json`, payload);
+  setDraftStatus('Exported JSON');
+}
+
+async function draftImport(){
+  try{
+    const obj = await loadJSONFile();
+    const st = obj?.state || obj; // supports wrapper or raw
+    applyState(st);
+    saveDraft(STATE_KEY, getState());
+    setDraftStatus('Imported + saved');
+  }catch{
+    alert('Could not import JSON draft.');
+  }
+}
+
+/** =========================
+ * HELPERS
+ * ========================= */
+function esc(s){
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function toast(title, msg){
+  const el = document.getElementById('toast');
+  el.innerHTML = `<div style="font-weight:1000">${esc(title)}</div><div style="opacity:.9">${msg}</div>`;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+function fmtDate(d){
+  try{ return new Date(d).toLocaleString(); }
+  catch{ return String(d || ''); }
+}
+
+function toNum(v){
+  const s = String(v ?? '').trim();
+  if(!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function csvEscape(v){
+  const s = String(v ?? '');
+  return `"${s.replace(/"/g,'""')}"`;
+}
+
+function buildCSV(headers, rows2d){
+  const head = headers.map(csvEscape).join(',');
+  const lines = rows2d.map(r => r.map(csvEscape).join(','));
+  return [head, ...lines].join('\n');
+}
+
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSVLine(line){
+  const out = [];
+  let cur = '';
+  let inQ = false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(ch === '"'){
+      if(inQ && line[i+1] === '"'){ cur += '"'; i++; }
+      else inQ = !inQ;
+    }else if(ch === ',' && !inQ){
+      out.push(cur);
+      cur = '';
+    }else{
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+  if(!lines.length) return [];
+  const headers = parseCSVLine(lines.shift()).map(h => h.replace(/^\uFEFF/, ''));
+  return lines.map(line=>{
+    const cells = parseCSVLine(line);
+    const o = {};
+    headers.forEach((h,i)=>o[h]=cells[i] ?? '');
+    return o;
+  });
+}
+
+function valFromAny(row, headers){
+  for(const h of headers){
+    const v = row?.[h];
+    if(v !== undefined && String(v ?? '').trim() !== '') return v;
+  }
+  return '';
+}
+
+function getFloorPly(row){
+  return valFromAny(row, [COL_FLOOR_PLY_PRIMARY, COL_FLOOR_PLY_FALLBACK]);
+}
+
+function getFloorGh(row){
+  return valFromAny(row, [COL_FLOOR_GH_PRIMARY, COL_FLOOR_GH_FALLBACK]);
+}
+
+function getPrice(row){
+  return valFromAny(row, [COL_PRICE_PRIMARY, COL_PRICE_FALLBACK]);
+}
+
+function setStatus(ok, msg){
+  document.getElementById('status').innerHTML =
+    `<span class="badge ${ok ? 'good' : 'bad'}">${ok ? 'Loaded' : 'Failed'}</span> ${msg}`;
+}
+
+function setMeta(html){
+  document.getElementById('meta').innerHTML = html || '';
+}
+
+function renderKPIs(){
+  document.getElementById('kpis').innerHTML = `
+    <div class="pill">Min/Max queued: ${mmQueue.size}</div>
+    <div class="pill">Weight queued: ${wQueue.size}</div>
+    <div class="pill">Bin queued: ${bQueue.size}</div>
+    <div class="pill">Putaway scans: ${putawayList.length}</div>
+  `;
+}
+
+function renderQueues(){
+  renderKPIs();
+  const box = document.getElementById('queuePreview');
+
+  const mm = Array.from(mmQueue.entries()).map(([id,v])=>{
+    const parts = [];
+    if(v.minPly !== undefined) parts.push(`minply=${v.minPly}`);
+    if(v.maxPly !== undefined) parts.push(`maxply=${v.maxPly}`);
+    if(v.minGh  !== undefined) parts.push(`mingh=${v.minGh}`);
+    if(v.maxGh  !== undefined) parts.push(`maxgh=${v.maxGh}`);
+    return `<div class="mono"><strong>${esc(id)}</strong> → ${esc(parts.join(', '))}</div>`;
+  }).join('') || `<div class="sub">No Min/Max queued.</div>`;
+
+  const ww = Array.from(wQueue.entries()).map(([id,w])=>
+    `<div class="mono"><strong>${esc(id)}</strong> → weight=${esc(w)}</div>`
+  ).join('') || `<div class="sub">No Weight queued.</div>`;
+
+  const bb = Array.from(bQueue.entries()).map(([id,b])=>
+    `<div class="mono"><strong>${esc(id)}</strong> → wh_bin=${esc(b)}</div>`
+  ).join('') || `<div class="sub">No Bin queued.</div>`;
+
+  box.innerHTML = `
+    <div><div style="font-weight:1000;margin-bottom:6px">Min/Max</div>${mm}</div>
+    <div class="hr"></div>
+    <div><div style="font-weight:1000;margin-bottom:6px">Weight</div>${ww}</div>
+    <div class="hr"></div>
+    <div><div style="font-weight:1000;margin-bottom:6px">Bin</div>${bb}</div>
+  `;
+}
+
+/** =========================
+ * QUEUE CLEAR / NEW BATCH
+ * ========================= */
+function clearBinQueue(){
+  if(bQueue.size === 0){
+    toast('Bin queue empty', 'Nothing to clear.');
+    return;
+  }
+  if(!confirm(`Clear BIN QUEUE only? This will remove ${bQueue.size} queued bin updates.`)) return;
+
+  bQueue.clear();
+  renderQueues();
+  forceSaveNow(); // important: overwrite saved draft so it stays cleared after refresh
+  toast('Cleared', 'Bin queue cleared. Next Bin Updates CSV will be clean.');
+}
+
+function newBatch(){
+  const countBins = bQueue.size;
+  const countScans = putawayList.length;
+  if(countBins === 0 && countScans === 0 && !currentMatch){
+    toast('Already clean', 'Nothing to reset.');
+    return;
+  }
+
+  if(!confirm(
+    `Start NEW BATCH?\n\nThis will clear:\n• Putaway scan log (${countScans})\n• Bin queue (${countBins})\n• Current scan/edit fields\n\nMin/Max and Weight queues will NOT be cleared.`
+  )) return;
+
+  // clear the two things that contaminate a new putaway/bin batch
+  putawayList.length = 0;
+  bQueue.clear();
+
+  // clear current UI state
+  currentMatch = null;
+  const editCard = document.getElementById('editCard');
+  if(editCard) editCard.style.display = 'none';
+  document.getElementById('result').innerHTML = '';
+
+  // clear edit fields if present
+  const ids = ['inVariantId','inBin','inWeight','inMinPly','inMaxPly','inMinGh','inMaxGh'];
+  for(const id of ids){
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  }
+
+  rebuildPutawayTable();
+  renderQueues();
+  forceSaveNow();
+  toast('New batch ready', 'Putaway + Bin queue cleared. Start scanning.');
+}
+
+/** =========================
+ * AUTO BIN QUEUE
+ * ========================= */
+function autoQueueBinCurrent(source){
+  if(!currentMatch) return false;
+
+  const id = String(currentMatch[COL_VARIANT_ID] || '').trim();
+  if(!id){
+    if(source === 'scan'){
+      toast('Not queued', 'This item has no Variant ID, so it cannot be included in the bin update CSV.');
+    }
+    return false;
+  }
+
+  const binVal = String(document.getElementById('inBin').value || '').trim(); // blank allowed
+  bQueue.set(id, binVal);
+
+  if(source === 'scan'){
+    toast(
+      'Added to bin queue',
+      binVal
+        ? `Queued bin: <span class="mono">${esc(binVal)}</span>`
+        : 'Queued blank bin (will clear WH bin in Shopify).'
+    );
+  }
+
+  return true;
+}
+
+/** =========================
+ * LOAD CSV
+ * ========================= */
+async function loadCSV(){
+  setStatus(false, 'Loading…');
+  setMeta('');
+  try{
+    const url = CSV_URL + '?v=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const lastModified = res.headers.get('last-modified');
+    const etag = res.headers.get('etag');
+
+    const text = await res.text();
+    rows = parseCSV(text);
+
+    setStatus(true, `Parsed ${rows.length} rows`);
+    setMeta(`
+      <div><strong>CSV Last Updated (server):</strong> ${lastModified ? fmtDate(lastModified) : '<span style="color:#7f1d1d;">Unknown</span>'}</div>
+      <div><strong>Loaded at (this device):</strong> ${new Date().toLocaleString()}</div>
+      ${etag ? `<div><strong>ETag:</strong> <span class="mono">${esc(etag)}</span></div>` : ''}
+    `);
+
+    // After CSV loads, try auto-restore draft once
+    autoRestoreDraftOnce();
+
+  }catch(e){
+    setStatus(false, `Couldn’t load <code>${esc(CSV_URL)}</code> — ${esc(e.message)}`);
+    setMeta(`<div style="color:#7f1d1d;"><strong>Tip:</strong> Open <code>${esc(CSV_URL)}</code> in a browser tab to confirm it exists.</div>`);
+    rows = [];
+  }
+  renderQueues();
+}
+
+let _didAutoRestore = false;
+function autoRestoreDraftOnce(){
+  if(_didAutoRestore) return;
+  _didAutoRestore = true;
+
+  const payload = loadDraft(STATE_KEY);
+  if(payload?.state){
+    applyState(payload.state);
+    setDraftStatus(`Restored draft (${new Date(payload._meta?.savedAt || Date.now()).toLocaleString()})`);
+  } else {
+    setDraftStatus('No saved draft (yet)');
+  }
+}
+
+/** =========================
+ * MATCH + CALCS
+ * ========================= */
+function findMatch(q){
+  const matches = rows.filter(r =>
+    (r[COL_BARCODE] && String(r[COL_BARCODE]).trim() === q) ||
+    (r[COL_SKU] && String(r[COL_SKU]).trim() === q)
+  );
+  if(!matches.length) return null;
+  const withId = matches.find(r => String(r[COL_VARIANT_ID] || '').trim() !== '');
+  return withId || matches[0];
+}
+
+function neededToMax(onHand, maxVal){
+  const on = toNum(onHand) ?? 0;
+  const mx = toNum(maxVal);
+  if(mx === null) return '—';
+  return String(Math.max(0, mx - on));
+}
+
+// Duplicate scan guard (fast double scans)
+let lastScanKey = '';
+let lastScanAt = 0;
+function isDuplicateScan(m){
+  const key = String(m[COL_VARIANT_ID] || m[COL_BARCODE] || m[COL_SKU] || '');
+  const now = Date.now();
+  if(key && key === lastScanKey && (now - lastScanAt) < 700){
+    return true;
+  }
+  lastScanKey = key;
+  lastScanAt = now;
+  return false;
+}
+
+/** =========================
+ * PUTAWAY LOG
+ * ========================= */
+function rebuildPutawayTable(){
+  const tbody = document.getElementById('log');
+  tbody.innerHTML = '';
+  // putawayList is newest-first. Render newest-first.
+  for(const item of putawayList){
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${esc(item.time || '')}</td>
+       <td class="mono">${esc(item.bin||'')}</td>
+       <td class="mono">${esc(item.barcode||'')}</td>
+       <td>${esc(item.title||'')}</td>`;
+    tbody.appendChild(tr);
+  }
+  renderKPIs();
+}
+
+function addPutaway(m){
+  const entry = {
+    time: new Date().toLocaleTimeString(),
+    bin: m[COL_WH_BIN] || '',
+    barcode: m[COL_BARCODE] || '',
+    sku: m[COL_SKU] || '',
+    title: m[COL_TITLE] || '',
+    price: getPrice(m),
+    floorPly: getFloorPly(m),
+    floorGh: getFloorGh(m),
+    variantId: m[COL_VARIANT_ID] || ''
+  };
+  putawayList.unshift(entry);
+  rebuildPutawayTable();
+}
+
+function clearLog(){
+  if(!putawayList.length) return;
+  if(!confirm('Clear the putaway scan log?')) return;
+  putawayList.length = 0;
+  rebuildPutawayTable();
+  scheduleSave();
+}
+
+/** =========================
+ * EDIT PANEL
+ * ========================= */
+function showEditFor(match){
+  currentMatch = match;
+
+  document.getElementById('inVariantId').value = match[COL_VARIANT_ID] || '';
+  document.getElementById('inMinPly').value    = match[COL_MIN_PLY] || '';
+  document.getElementById('inMaxPly').value    = match[COL_MAX_PLY] || '';
+  document.getElementById('inMinGh').value     = match[COL_MIN_GH]  || '';
+  document.getElementById('inMaxGh').value     = match[COL_MAX_GH]  || '';
+  document.getElementById('inWeight').value    = match[COL_WEIGHT]  || '';
+  document.getElementById('inBin').value       = match[COL_WH_BIN]  || '';
+
+  document.getElementById('editCard').style.display = 'block';
+
+  // auto-queue bin on scan + keep queue updated as you type (blank allowed)
+  autoQueueBinCurrent('scan');
+
+  if(!binAutoHooked){
+    binAutoHooked = true;
+    document.getElementById('inBin').addEventListener('input', () => {
+      autoQueueBinCurrent('edit');
+      renderQueues();
+      scheduleSave();
+    });
+  }
+
+  renderQueues();
+  scheduleSave();
+}
+
+function clearEdit(){
+  document.getElementById('inMinPly').value = '';
+  document.getElementById('inMaxPly').value = '';
+  document.getElementById('inMinGh').value  = '';
+  document.getElementById('inMaxGh').value  = '';
+  document.getElementById('inWeight').value = '';
+  document.getElementById('inBin').value    = '';
+  toast('Cleared', 'Fields cleared (bin can be left blank).');
+
+  renderQueues();
+  scheduleSave();
+}
+
+/** =========================
+ * QUEUE UPDATES
+ * ========================= */
+function queueMinMax(){
+  if(!currentMatch){ toast('Scan first', 'No active item.'); return; }
+  const id = String(currentMatch[COL_VARIANT_ID] || '').trim();
+  if(!id){ toast('Missing Variant ID', 'No Variant ID found in CSV.'); return; }
+
+  const minPly = toNum(document.getElementById('inMinPly').value);
+  const maxPly = toNum(document.getElementById('inMaxPly').value);
+  const minGh  = toNum(document.getElementById('inMinGh').value);
+  const maxGh  = toNum(document.getElementById('inMaxGh').value);
+
+  if(minPly === null && maxPly === null && minGh === null && maxGh === null){
+    toast('Nothing queued', 'Enter at least one min/max value.');
+    return;
+  }
+
+  const existing = mmQueue.get(id) || {};
+  if(minPly !== null) existing.minPly = minPly;
+  if(maxPly !== null) existing.maxPly = maxPly;
+  if(minGh  !== null) existing.minGh  = minGh;
+  if(maxGh  !== null) existing.maxGh  = maxGh;
+
+  mmQueue.set(id, existing);
+  toast('Queued', 'Min/Max update queued.');
+  renderQueues();
+  scheduleSave();
+}
+
+function queueWeight(){
+  if(!currentMatch){ toast('Scan first', 'No active item.'); return; }
+  const id = String(currentMatch[COL_VARIANT_ID] || '').trim();
+  if(!id){ toast('Missing Variant ID', 'No Variant ID found in CSV.'); return; }
+
+  const w = String(document.getElementById('inWeight').value || '').trim();
+  if(!w){
+    toast('Nothing queued', 'Enter a weight value.');
+    return;
+  }
+
+  wQueue.set(id, w);
+  toast('Queued', 'Weight update queued.');
+  renderQueues();
+  scheduleSave();
+}
+
+// Still available manually, but blank allowed
+function queueBin(){
+  if(!currentMatch){ toast('Scan first', 'No active item.'); return; }
+  const id = String(currentMatch[COL_VARIANT_ID] || '').trim();
+  if(!id){ toast('Missing Variant ID', 'No Variant ID found in CSV.'); return; }
+
+  const bin = String(document.getElementById('inBin').value || '').trim(); // blank allowed
+  bQueue.set(id, bin);
+  toast('Queued', bin === '' ? 'Bin update queued (blank allowed).' : 'Bin update queued.');
+  renderQueues();
+  scheduleSave();
+}
+
+/** =========================
+ * EXPORTS
+ * ========================= */
+function downloadPutawayCSV(){
+  if(!putawayList.length){
+    toast('Nothing to download', 'Putaway list is empty.');
+    return;
+  }
+  const sorted = [...putawayList].sort((a,b)=>{
+    const A = (a.bin || '').toUpperCase();
+    const B = (b.bin || '').toUpperCase();
+    return A.localeCompare(B, undefined, { numeric:true, sensitivity:'base' });
+  });
+  const headers = ['Bin','Barcode','Title'];
+  const rows2d = sorted.map(r => [r.bin, r.barcode, r.title]);
+  downloadText(`putaway-report_${new Date().toISOString().slice(0,10)}.csv`, buildCSV(headers, rows2d));
+}
+
+function expandFloorRowsForExport(){
+  const dest = document.getElementById('floorDestination')?.value || 'plymouth';
+  const expanded = [];
+
+  for(const item of putawayList){
+    if(dest === 'plymouth' || dest === 'both'){
+      expanded.push({
+        destination: 'Plymouth',
+        floorLocation: item.floorPly || '',
+        whBin: item.bin || '',
+        barcode: item.barcode || '',
+        sku: item.sku || '',
+        title: item.title || '',
+        price: item.price || '',
+        variantId: item.variantId || ''
+      });
+    }
+
+    if(dest === 'green' || dest === 'both'){
+      expanded.push({
+        destination: 'Green Harbor',
+        floorLocation: item.floorGh || '',
+        whBin: item.bin || '',
+        barcode: item.barcode || '',
+        sku: item.sku || '',
+        title: item.title || '',
+        price: item.price || '',
+        variantId: item.variantId || ''
+      });
+    }
+  }
+
+  return expanded;
+}
+
+function aggregateFloorRows(rowsIn){
+  const map = new Map();
+
+  for(const r of rowsIn){
+    const key = [
+      r.destination,
+      r.floorLocation,
+      r.whBin,
+      r.barcode,
+      r.sku,
+      r.title,
+      r.price,
+      r.variantId
+    ].join('||');
+
+    if(!map.has(key)){
+      map.set(key, {...r, qty: 0});
+    }
+    map.get(key).qty += 1;
+  }
+
+  return Array.from(map.values());
+}
+
+function downloadFloorPutawayCSV(){
+  if(!putawayList.length){
+    toast('Nothing to download', 'Putaway list is empty.');
+    return;
+  }
+
+  const expanded = expandFloorRowsForExport();
+  const grouped = aggregateFloorRows(expanded);
+
+  grouped.sort((a,b)=>{
+    const locA = (a.floorLocation || 'ZZZ NEEDS LOCATION').toUpperCase();
+    const locB = (b.floorLocation || 'ZZZ NEEDS LOCATION').toUpperCase();
+
+    const byDest = a.destination.localeCompare(b.destination, undefined, {numeric:true, sensitivity:'base'});
+    if(byDest) return byDest;
+
+    const byLoc = locA.localeCompare(locB, undefined, {numeric:true, sensitivity:'base'});
+    if(byLoc) return byLoc;
+
+    const byTitle = (a.title || '').localeCompare((b.title || ''), undefined, {numeric:true, sensitivity:'base'});
+    if(byTitle) return byTitle;
+
+    return (a.barcode || '').localeCompare((b.barcode || ''), undefined, {numeric:true, sensitivity:'base'});
+  });
+
+  const headers = [
+    'Destination',
+    'Floor Location',
+    'WH Bin',
+    'Barcode',
+    'SKU',
+    'Title',
+    'Retail Price',
+    'Qty',
+    'Status'
+  ];
+
+  const rows2d = grouped.map(r => [
+    r.destination,
+    r.floorLocation || 'NEEDS FLOOR LOCATION',
+    r.whBin,
+    r.barcode,
+    r.sku,
+    r.title,
+    r.price,
+    r.qty,
+    r.floorLocation ? '' : 'NEEDS LOCATION'
+  ]);
+
+  downloadText(`floor-putaway_${new Date().toISOString().slice(0,10)}.csv`, buildCSV(headers, rows2d));
+  toast('Downloaded', 'Floor Putaway CSV exported and sorted by floor location.');
+}
+
+function downloadMinMaxCSV(){
+  if(mmQueue.size === 0){
+    toast('No updates queued', 'Queue a min/max update first.');
+    return;
+  }
+
+  let useMinPly=false, useMaxPly=false, useMinGh=false, useMaxGh=false;
+  for(const [,v] of mmQueue){
+    if(v.minPly !== undefined) useMinPly=true;
+    if(v.maxPly !== undefined) useMaxPly=true;
+    if(v.minGh  !== undefined) useMinGh=true;
+    if(v.maxGh  !== undefined) useMaxGh=true;
+  }
+
+  const headers = [COL_VARIANT_ID];
+  if(useMinPly) headers.push(COL_MIN_PLY);
+  if(useMaxPly) headers.push(COL_MAX_PLY);
+  if(useMinGh)  headers.push(COL_MIN_GH);
+  if(useMaxGh)  headers.push(COL_MAX_GH);
+
+  const rows2d = Array.from(mmQueue.entries()).map(([id, v])=>{
+    const row = [id];
+    if(useMinPly) row.push(v.minPly ?? '');
+    if(useMaxPly) row.push(v.maxPly ?? '');
+    if(useMinGh)  row.push(v.minGh  ?? '');
+    if(useMaxGh)  row.push(v.maxGh  ?? '');
+    return row;
+  });
+
+  downloadText(`updates_minmax_${new Date().toISOString().slice(0,10)}.csv`, buildCSV(headers, rows2d));
+}
+
+function downloadWeightCSV(){
+  if(wQueue.size === 0){
+    toast('No updates queued', 'Queue a weight update first.');
+    return;
+  }
+  const headers = [COL_VARIANT_ID, COL_WEIGHT];
+  const rows2d = Array.from(wQueue.entries()).map(([id, w]) => [id, w]);
+  downloadText(`updates_weight_${new Date().toISOString().slice(0,10)}.csv`, buildCSV(headers, rows2d));
+}
+
+// Bin updates: ONLY Variant ID + WH Bin (blank allowed)
+function downloadBinCSV(){
+  if(bQueue.size === 0){
+    toast('No updates queued', 'Scan an item (auto-queues bin), then download.');
+    return;
+  }
+  const headers = [COL_VARIANT_ID, COL_WH_BIN];
+  const rows2d = Array.from(bQueue.entries()).map(([id, bin]) => [id, bin]);
+  downloadText(`updates_bin_${new Date().toISOString().slice(0,10)}.csv`, buildCSV(headers, rows2d));
+
+  // Optional auto-clear after download
+  const autoEl = document.getElementById('autoClearBinAfterDownload');
+  if(autoEl && autoEl.checked){
+    bQueue.clear();
+    renderQueues();
+    forceSaveNow();
+    toast('Auto-cleared', 'Bin queue cleared after download.');
+  } else {
+    scheduleSave();
+  }
+}
+
+/** =========================
+ * SCAN HANDLER
+ * ========================= */
+document.getElementById('scan').addEventListener('keydown', (e)=>{
+  if(e.key !== 'Enter') return;
+  const q = e.target.value.trim();
+  e.target.value = '';
+  setTimeout(()=>document.getElementById('scan').focus(), 50);
+  doScan(q);
+});
+
+function doScan(q){
+  if(!rows.length){
+    toast('CSV not loaded', 'Reload the page or click “Reload from site”.');
+    return;
+  }
+  if(!q){
+    toast('Empty scan', 'Scan a barcode or SKU.');
+    return;
+  }
+
+  const m = findMatch(q);
+  if(!m){
+    document.getElementById('result').innerHTML = `<span class="badge bad">Not found</span>`;
+    toast('Not found', 'No match for that barcode/SKU.');
+    return;
+  }
+
+  if(isDuplicateScan(m)){
+    toast('Duplicate scan ignored', 'Scanned twice too quickly.');
+    return;
+  }
+
+  // Calculate needed-to-max
+  const plyNeed = neededToMax(m[COL_INV_PLY], m[COL_MAX_PLY]);
+  const ghNeed  = neededToMax(m[COL_INV_GH],  m[COL_MAX_GH]);
+
+  const bin = m[COL_WH_BIN] || '—';
+  const floorPly = getFloorPly(m) || '—';
+  const floorGh = getFloorGh(m) || '—';
+
+  document.getElementById('result').innerHTML = `
+    <div class="grid2">
+      <div class="card" style="margin:0;border:1px solid var(--line);box-shadow:none">
+        <div style="font-weight:1000;color:#1f2937">Plymouth Needed to Max</div>
+        <div class="bigNum">${esc(plyNeed)}</div>
+        <div class="smallMeta">Max ${esc(m[COL_MAX_PLY] || '—')} • On hand ${esc(m[COL_INV_PLY] || '—')}</div>
+        <div class="smallMeta"><strong>Floor:</strong> <span class="mono">${esc(floorPly)}</span></div>
+      </div>
+      <div class="card" style="margin:0;border:1px solid var(--line);box-shadow:none">
+        <div style="font-weight:1000;color:#1f2937">Green Harbor Needed to Max</div>
+        <div class="bigNum">${esc(ghNeed)}</div>
+        <div class="smallMeta">Max ${esc(m[COL_MAX_GH] || '—')} • On hand ${esc(m[COL_INV_GH] || '—')}</div>
+        <div class="smallMeta"><strong>Floor:</strong> <span class="mono">${esc(floorGh)}</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;font-weight:1000">WH Bin: <span class="mono">${esc(bin)}</span></div>
+    <div style="margin-top:2px;font-size:18px;font-weight:1000">${esc(m[COL_TITLE] || '')}</div>
+    <div class="sub" style="margin:6px 0 0">
+      <strong>Barcode:</strong> <span class="mono">${esc(m[COL_BARCODE] || '')}</span>
+      &nbsp; | &nbsp;
+      <strong>SKU:</strong> <span class="mono">${esc(m[COL_SKU] || '')}</span>
+      &nbsp; | &nbsp;
+      <strong>Variant ID:</strong> <span class="mono">${esc(m[COL_VARIANT_ID] || '')}</span>
+    </div>
+  `;
+
+  // Add to putaway and show edit panel (this also auto-queues bin now)
+  addPutaway(m);
+  showEditFor(m);
+
+  scheduleSave();
+}
+
+/** boot */
+loadCSV();
+renderQueues();
+
+// Save if checkbox or floor destination changes
+document.getElementById('autoClearBinAfterDownload')?.addEventListener('change', ()=> scheduleSave());
+document.getElementById('floorDestination')?.addEventListener('change', ()=> scheduleSave());
+
+</script>
+
+</body>
+</html>

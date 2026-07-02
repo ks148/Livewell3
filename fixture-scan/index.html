@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Livewell – Floor Refill</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{font-family:system-ui;margin:20px;background:#f4f6f9;color:#0f172a}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:4px}
+input,button{font-size:15px;padding:10px;border:1px solid #cbd5e1;border-radius:10px}
+input{min-width:220px}
+button{cursor:pointer;background:#0f172a;color:white;font-weight:700}
+button.secondary{background:#475569}
+button.danger{background:#991b1b}
+button.good{background:#166534}
+button.smallbtn{padding:6px 10px;font-size:12px}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:14px}
+th{background:#f8fafc;font-size:12px;text-transform:uppercase;color:#475569}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#e2e8f0;font-size:12px;font-weight:700}
+.current{font-size:26px;font-weight:900}
+.small{font-size:12px;color:#64748b}
+.ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;padding:10px;border-radius:10px}
+.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px;border-radius:10px}
+.warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:10px}
+.fixture-title{font-weight:900;font-size:18px;margin:18px 0 8px}
+.fixture-pill{display:inline-flex;gap:8px;align-items:center;background:#e2e8f0;border-radius:999px;padding:8px 12px;margin:4px;font-weight:800}
+</style>
+</head>
+
+<body>
+
+<h1>Livewell – Floor Refill</h1>
+<p class="small">Scan empty pegs by fixture. Warehouse pick sorts by WH Bin. Put-back list stays in scanned order with retail price.</p>
+
+<div class="card">
+  <h2>1. Load Shopify Export</h2>
+  <input type="file" id="csvFile" accept=".csv">
+  <div id="loadStatus" class="small" style="margin-top:8px;">No file loaded.</div>
+</div>
+
+<div class="card">
+  <h2>2. Start / Change Fixture</h2>
+
+  <div class="row">
+    <div>
+      <label>New Fixture / Wall Name</label>
+      <input id="fixtureInput" placeholder="Example: Bass Wall A">
+    </div>
+
+    <button onclick="startFixture()">Start Fixture</button>
+    <button class="secondary" onclick="renameCurrentFixture()">Rename Current Fixture</button>
+  </div>
+
+  <div style="margin-top:14px;">
+    <div class="small">Current Fixture</div>
+    <div id="currentFixture" class="current">None selected</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>3. Scan Empty Pegs</h2>
+
+  <div class="row">
+    <div>
+      <label>Qty Needed</label>
+      <input id="qtyInput" type="number" min="1" value="1" style="min-width:90px;">
+    </div>
+
+    <div>
+      <label>Scan Peg Barcode / SKU / Variant ID</label>
+      <input id="scanInput" placeholder="Scan here..." autofocus>
+    </div>
+
+    <button onclick="addScan()">Add Scan</button>
+    <button class="secondary" onclick="clearScanBox()">Clear</button>
+  </div>
+
+  <div id="scanStatus" style="margin-top:12px;"></div>
+</div>
+
+<div class="card">
+  <h2>Fixtures</h2>
+  <div id="fixtureList" class="small">No fixtures yet.</div>
+</div>
+
+<div class="card">
+  <h2>Exports</h2>
+  <div class="row">
+    <button class="good" onclick="downloadWarehousePick()">Download Warehouse Pick</button>
+    <button class="good" onclick="downloadPutBackList()">Download Fixture Put-Back List</button>
+    <button class="danger" onclick="clearAllScans()">Clear All Scans</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Current Refill List</h2>
+  <div id="scanTable"></div>
+</div>
+
+<script>
+let productRows = [];
+let lookup = new Map();
+let scans = [];
+let fixtureCounters = {};
+let currentFixture = "";
+let fixtures = [];
+
+const COLS = {
+  title: ["Title", "Product Title", "Variant Title"],
+  barcode: ["Variant Barcode", "Barcode", "barcode"],
+  sku: ["Variant SKU", "SKU", "sku"],
+  variantId: ["Variant ID", "Variant Id", "ID", "id"],
+  whBin: [
+    "Variant Metafield: custom.wh_bin [single_line_text_field]",
+    "WH Bin",
+    "Warehouse Bin",
+    "Bin"
+  ],
+  price: ["Variant Price", "Price", "Retail Price"]
+};
+
+document.getElementById("csvFile").addEventListener("change", handleFile);
+
+document.getElementById("scanInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addScan();
+  }
+});
+
+document.getElementById("fixtureInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    startFixture();
+  }
+});
+
+function startFixture() {
+  const name = document.getElementById("fixtureInput").value.trim();
+
+  if (!name) {
+    setStatus("Enter a fixture name first.", "err");
+    return;
+  }
+
+  if (!fixtures.includes(name)) {
+    fixtures.push(name);
+  }
+
+  currentFixture = name;
+
+  if (!fixtureCounters[currentFixture]) {
+    fixtureCounters[currentFixture] = 0;
+  }
+
+  document.getElementById("currentFixture").textContent = currentFixture;
+  document.getElementById("fixtureInput").value = "";
+  document.getElementById("scanInput").focus();
+
+  renderFixtureList();
+  setStatus(`Now scanning fixture: ${currentFixture}`, "ok");
+}
+
+function renameCurrentFixture() {
+  if (!currentFixture) {
+    setStatus("No current fixture selected.", "err");
+    return;
+  }
+
+  const newName = prompt("Rename current fixture:", currentFixture);
+  if (!newName || !newName.trim()) return;
+
+  const oldName = currentFixture;
+  const cleanName = newName.trim();
+
+  scans.forEach(s => {
+    if (s.fixture === oldName) {
+      s.fixture = cleanName;
+    }
+  });
+
+  fixtures = fixtures.map(f => f === oldName ? cleanName : f);
+
+  fixtureCounters[cleanName] = fixtureCounters[oldName] || 0;
+  delete fixtureCounters[oldName];
+
+  currentFixture = cleanName;
+  document.getElementById("currentFixture").textContent = currentFixture;
+
+  renderFixtureList();
+  renderTable();
+  setStatus(`Renamed fixture to: ${currentFixture}`, "ok");
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = "", inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], n = text[i + 1];
+
+    if (c === '"' && inQuotes && n === '"') {
+      cell += '"';
+      i++;
+    } else if (c === '"') {
+      inQuotes = !inQuotes;
+    } else if (c === "," && !inQuotes) {
+      row.push(cell);
+      cell = "";
+    } else if ((c === "\n" || c === "\r") && !inQuotes) {
+      if (cell || row.length) {
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = "";
+      }
+      if (c === "\r" && n === "\n") i++;
+    } else {
+      cell += c;
+    }
+  }
+
+  if (cell || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const rows = parseCSV(reader.result);
+    const headers = rows[0].map(h => h.trim());
+
+    productRows = rows.slice(1).map(r => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = r[i] || "");
+      return obj;
+    });
+
+    buildLookup();
+
+    document.getElementById("loadStatus").innerHTML =
+      `<span class="badge">${productRows.length}</span> products loaded.`;
+  };
+
+  reader.readAsText(file);
+}
+
+function getVal(row, possibleCols) {
+  for (const col of possibleCols) {
+    if (row[col] !== undefined && String(row[col]).trim() !== "") {
+      return String(row[col]).trim();
+    }
+  }
+  return "";
+}
+
+function norm(v) {
+  return String(v || "").trim().toLowerCase();
+}
+
+function buildLookup() {
+  lookup.clear();
+
+  productRows.forEach(row => {
+    const keys = [
+      getVal(row, COLS.barcode),
+      getVal(row, COLS.sku),
+      getVal(row, COLS.variantId)
+    ];
+
+    keys.forEach(k => {
+      if (k) lookup.set(norm(k), row);
+    });
+  });
+}
+
+function addScan() {
+  const code = document.getElementById("scanInput").value.trim();
+  const qty = Math.max(1, Number(document.getElementById("qtyInput").value || 1));
+
+  if (!currentFixture) {
+    setStatus("Start a fixture before scanning.", "err");
+    return;
+  }
+
+  if (!code) {
+    setStatus("Scan or enter a barcode/SKU/Variant ID.", "err");
+    return;
+  }
+
+  const row = lookup.get(norm(code));
+
+  if (!row) {
+    setStatus(`No product found for: ${code}`, "err");
+    return;
+  }
+
+  if (!fixtures.includes(currentFixture)) {
+    fixtures.push(currentFixture);
+  }
+
+  fixtureCounters[currentFixture] = (fixtureCounters[currentFixture] || 0) + 1;
+
+  const scan = {
+    fixture: currentFixture,
+    scanOrder: fixtureCounters[currentFixture],
+    scannedCode: code,
+    qty,
+    title: getVal(row, COLS.title),
+    barcode: getVal(row, COLS.barcode),
+    sku: getVal(row, COLS.sku),
+    variantId: getVal(row, COLS.variantId),
+    whBin: getVal(row, COLS.whBin),
+    price: formatPrice(getVal(row, COLS.price))
+  };
+
+  scans.push(scan);
+
+  setStatus(`Added: ${scan.title} — ${currentFixture} #${scan.scanOrder}`, "ok");
+
+  document.getElementById("scanInput").value = "";
+  document.getElementById("scanInput").focus();
+
+  renderFixtureList();
+  renderTable();
+}
+
+function deleteScan(index) {
+  scans.splice(index, 1);
+  rebuildFixtureCounters();
+  renderFixtureList();
+  renderTable();
+}
+
+function rebuildFixtureCounters() {
+  fixtureCounters = {};
+
+  scans.forEach(s => {
+    if (!fixtureCounters[s.fixture]) fixtureCounters[s.fixture] = 0;
+    fixtureCounters[s.fixture]++;
+    s.scanOrder = fixtureCounters[s.fixture];
+  });
+
+  fixtures.forEach(f => {
+    if (!fixtureCounters[f]) fixtureCounters[f] = 0;
+  });
+}
+
+function formatPrice(v) {
+  if (!v) return "";
+  const n = Number(String(v).replace(/[^0-9.]/g, ""));
+  if (isNaN(n)) return v;
+  return "$" + n.toFixed(2);
+}
+
+function setStatus(msg, type) {
+  document.getElementById("scanStatus").innerHTML = `<div class="${type}">${msg}</div>`;
+}
+
+function clearScanBox() {
+  document.getElementById("scanInput").value = "";
+  document.getElementById("scanInput").focus();
+}
+
+function clearAllScans() {
+  if (!confirm("Clear all scans and fixtures?")) return;
+
+  scans = [];
+  fixtureCounters = {};
+  fixtures = [];
+  currentFixture = "";
+
+  document.getElementById("currentFixture").textContent = "None selected";
+  renderFixtureList();
+  renderTable();
+
+  setStatus("All scans cleared.", "warn");
+}
+
+function whBinSort(a, b) {
+  return String(a.whBin || "").localeCompare(String(b.whBin || ""), undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+}
+
+function renderFixtureList() {
+  scans.forEach(s => {
+    if (!fixtures.includes(s.fixture)) fixtures.push(s.fixture);
+  });
+
+  if (currentFixture && !fixtures.includes(currentFixture)) {
+    fixtures.push(currentFixture);
+  }
+
+  if (!fixtures.length) {
+    document.getElementById("fixtureList").innerHTML = "No fixtures yet.";
+    return;
+  }
+
+  let html = "";
+
+  fixtures.forEach(f => {
+    const count = scans.filter(s => s.fixture === f).length;
+    const active = f === currentFixture;
+
+    html += `
+      <span class="fixture-pill">
+        ${escapeHtml(f)}
+        <span class="badge">${count}</span>
+        ${active ? `<span class="badge">Current</span>` : ""}
+        <button class="smallbtn secondary" onclick="switchFixture('${escapeJs(f)}')">Switch</button>
+      </span>
+    `;
+  });
+
+  document.getElementById("fixtureList").innerHTML = html;
+}
+
+function switchFixture(fixture) {
+  currentFixture = fixture;
+
+  if (!fixtures.includes(currentFixture)) {
+    fixtures.push(currentFixture);
+  }
+
+  document.getElementById("currentFixture").textContent = currentFixture;
+  document.getElementById("scanInput").focus();
+
+  renderFixtureList();
+  setStatus(`Switched to fixture: ${currentFixture}`, "ok");
+}
+
+function renderTable() {
+  if (!scans.length) {
+    document.getElementById("scanTable").innerHTML = `<p class="small">No scans yet.</p>`;
+    return;
+  }
+
+  const grouped = {};
+
+  scans.forEach((s, index) => {
+    if (!grouped[s.fixture]) grouped[s.fixture] = [];
+    grouped[s.fixture].push({...s, index});
+  });
+
+  let html = "";
+
+  Object.keys(grouped).forEach(fixture => {
+    html += `<div class="fixture-title">${escapeHtml(fixture)}</div>`;
+    html += `<table>
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Title</th>
+          <th>Qty</th>
+          <th>Retail</th>
+          <th>WH Bin</th>
+          <th>Barcode</th>
+          <th></th>
+        </tr>
+      </thead><tbody>`;
+
+    grouped[fixture]
+      .sort((a,b) => a.scanOrder - b.scanOrder)
+      .forEach(s => {
+        html += `<tr>
+          <td>${s.scanOrder}</td>
+          <td>${escapeHtml(s.title)}</td>
+          <td>${s.qty}</td>
+          <td>${escapeHtml(s.price)}</td>
+          <td>${escapeHtml(s.whBin)}</td>
+          <td>${escapeHtml(s.barcode)}</td>
+          <td><button class="smallbtn danger" onclick="deleteScan(${s.index})">Delete</button></td>
+        </tr>`;
+      });
+
+    html += `</tbody></table>`;
+  });
+
+  document.getElementById("scanTable").innerHTML = html;
+}
+
+function csvEscape(v) {
+  const s = String(v ?? "");
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+function downloadCSV(filename, rows) {
+  const csv = rows.map(r => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadWarehousePick() {
+  const rows = [[
+    "WH Bin",
+    "Fixture",
+    "Fixture Scan Order",
+    "Title",
+    "Qty Needed",
+    "Barcode",
+    "SKU",
+    "Variant ID",
+    "Retail Price"
+  ]];
+
+  const sorted = [...scans].sort(whBinSort);
+
+  sorted.forEach(s => rows.push([
+    s.whBin,
+    s.fixture,
+    s.scanOrder,
+    s.title,
+    s.qty,
+    s.barcode,
+    s.sku,
+    s.variantId,
+    s.price
+  ]));
+
+  downloadCSV(`Floor Refill - Warehouse Pick - ${today()}.csv`, rows);
+}
+
+function downloadPutBackList() {
+  const rows = [[
+    "Fixture",
+    "Fixture Scan Order",
+    "Title",
+    "Qty Picked",
+    "Retail Price",
+    "Barcode",
+    "SKU",
+    "Variant ID",
+    "WH Bin"
+  ]];
+
+  const sorted = [...scans].sort((a,b) => {
+    const f = a.fixture.localeCompare(b.fixture, undefined, {
+      numeric:true,
+      sensitivity:"base"
+    });
+    if (f !== 0) return f;
+    return a.scanOrder - b.scanOrder;
+  });
+
+  sorted.forEach(s => rows.push([
+    s.fixture,
+    s.scanOrder,
+    s.title,
+    s.qty,
+    s.price,
+    s.barcode,
+    s.sku,
+    s.variantId,
+    s.whBin
+  ]));
+
+  downloadCSV(`Floor Refill - Fixture Put Back - ${today()}.csv`, rows);
+}
+
+function today() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#039;"
+  }[m]));
+}
+
+function escapeJs(s) {
+  return String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+renderTable();
+renderFixtureList();
+</script>
+
+</body>
+</html>
